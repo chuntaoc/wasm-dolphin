@@ -2,22 +2,26 @@
  * AEML Wii bridge -- (c) AEML, NTUST
  * Connects the AEML Blogger shell (parent page) to wasm-dolphin's host.
  * Messages in : hello, pick, load, input, saveState, loadState
- * Messages out: ready, picked, progress, loaded, state, stateLoaded,
+ * Messages out: ready, ack, picked, progress, loaded, state, stateLoaded,
  *               needGesture, gestureDone, error
  * SPDX-License-Identifier: GPL-2.0-or-later (combined with Dolphin)
  * ===================================================================== */
 import { inputStateFromPressed } from "./src/input.js";
 
 /* Pages allowed to control this core. Replace the blogspot pattern with
-   your own blog address to stop other sites from embedding it. */
+   your own blog address to stop other sites from embedding it.
+   www.blogger.com is Blogger's post preview. Add your custom domain here
+   if your blog uses one (e.g. /^https:\/\/games\.example\.com$/). */
 const ALLOWED_PARENTS = [
   /^https:\/\/[a-z0-9-]+\.blogspot\.com$/,
+  /^https:\/\/(www\.)?blogger\.com$/,
   /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/
 ];
 
 const params = new URLSearchParams(location.search);
 const EMBED = params.get("embed") === "aeml" && window.parent !== window;
 const SIG = "AEML, NTUST";
+const BRIDGE_VER = "1.3";
 let parentOrigin = null;
 
 function allowed(origin) { return ALLOWED_PARENTS.some((re) => re.test(origin)); }
@@ -210,16 +214,24 @@ async function loadState(id, data) {
 
 if (EMBED) {
   window.addEventListener("message", (e) => {
-    if (e.source !== window.parent || !allowed(e.origin)) return;
+    if (e.source !== window.parent) return;
     const d = e.data || {};
     if (d.aeml !== 1) return;
+    if (!allowed(e.origin)) {
+      /* Say why we are ignoring this page, so the shell can show it. */
+      if (d.cmd === "hello") window.parent.postMessage({ aeml: 1, cmd: "error", message: "origin-not-allowed", origin: e.origin }, e.origin);
+      return;
+    }
     parentOrigin = e.origin;
     const fail = (err) => post({ cmd: "error", id: d.id, message: String((err && err.message) || err) });
     switch (d.cmd) {
       case "hello": announce(); break;
       case "input": applyInput(d.state); break;
       case "pick": showPicker(); break;
-      case "load": if (d.file instanceof Blob) adoptParentFile(d.file).catch(fail); else fail("no file"); break;
+      case "load":
+        post({ cmd: "ack", size: d.file && d.file.size });
+        if (d.file instanceof Blob) adoptParentFile(d.file).catch(fail); else fail("no file");
+        break;
       case "saveState": saveState(d.id).catch(fail); break;
       case "loadState": loadState(d.id, d.data).catch(fail); break;
     }
@@ -231,7 +243,7 @@ if (EMBED) {
     if (window.__aemlNotIsolated || !window.crossOriginIsolated) {
       post({ cmd: "error", message: "not-isolated" }); return;
     }
-    waitFor(() => window.__host).then(() => post({ cmd: "ready" }));
+    waitFor(() => window.__host).then(() => post({ cmd: "ready", ver: BRIDGE_VER }));
   }
   let ref = "";
   try { ref = new URL(document.referrer).origin; } catch (e) {}
