@@ -2,7 +2,7 @@
  * AEML Wii bridge -- (c) AEML, NTUST
  * Connects the AEML Blogger shell (parent page) to wasm-dolphin's host.
  * Messages in : hello, pick, load, input, saveState, loadState
- * Messages out: ready, picked, loaded, state, stateLoaded,
+ * Messages out: ready, picked, progress, loaded, state, stateLoaded,
  *               needGesture, gestureDone, error
  * SPDX-License-Identifier: GPL-2.0-or-later (combined with Dolphin)
  * ===================================================================== */
@@ -91,6 +91,53 @@ function applyInput(s) {
   host.setInputState(st);
 }
 
+/* ---- loading progress (drives the light bar on the Blogger page) ----
+ * copy : file copied in from the parent page (real byte count)
+ * core : emulator core download + start-up (estimated, creeps forward)
+ * mount: disc mounted in the core
+ * boot : waiting for the game to start running
+ * The core reports its phases through console.log("[boot-phase] ..."),
+ * which we watch to move the bar at the real milestones. */
+let span = [0, 100], curPct = 0, creepTimer = 0, mountSeen = false;
+function progress(stage, pct, extra) {
+  curPct = Math.max(curPct, Math.min(100, pct));
+  const overall = span[0] + (span[1] - span[0]) * curPct / 100;
+  post(Object.assign({ cmd: "progress", stage, pct: Math.round(overall * 10) / 10 }, extra || {}));
+}
+function creep(stage, target) {
+  clearInterval(creepTimer);
+  creepTimer = setInterval(() => progress(stage, curPct + (target - curPct) * 0.04), 250);
+}
+function stopCreep() { clearInterval(creepTimer); creepTimer = 0; }
+if (EMBED) {
+  const origLog = console.log;
+  console.log = function () {
+    try {
+      const t = String(arguments[0] || "");
+      if (t.indexOf("[boot-phase]") === 0) {
+        if (t.indexOf("mountGame() entry") >= 0) progress("core", 8);
+        else if (t.indexOf("new Worker(discio)") >= 0) { progress("core", 12); creep("core", 68); }
+        else if (t.indexOf("after this.load()") >= 0) { progress("mount", 72); creep("mount", 88); }
+        else if (t.indexOf("mountFile responded") >= 0) { mountSeen = true; progress("boot", 90); creep("boot", 98); }
+      }
+    } catch (e) { /* never break the core's logging */ }
+    return origLog.apply(this, arguments);
+  };
+}
+async function copyWithProgress(file) {
+  const reader = file.stream().getReader();
+  const parts = []; let got = 0, last = 0;
+  for (;;) {
+    const r = await reader.read();
+    if (r.done) break;
+    parts.push(r.value); got += r.value.length;
+    const now = performance.now();
+    if (now - last > 120) { last = now; progress("copy", 100 * got / file.size, { done: got, total: file.size }); }
+  }
+  progress("copy", 100, { done: got, total: file.size });
+  return new File(parts, file.name, { type: file.type });
+}
+
 /* ---- choose the game file inside this frame ----
  * A File handed over from the parent page lives in another browser
  * process, and the core's disc reader crashes on it. Files picked or
@@ -114,24 +161,30 @@ function showPicker() {
   wrap.addEventListener("drop", (e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) { wrap.remove(); startLoad(f); } });
   wrap.append(b, note, inp); document.body.appendChild(wrap);
 }
-function startLoad(file) {
+function startLoad(file, copied) {
+  if (!copied) { span = [0, 100]; curPct = 0; }
   post({ cmd: "picked", name: file.name, size: file.size });
   loadGame(file).catch((err) => post({ cmd: "error", message: String((err && err.message) || err) }));
 }
 async function adoptParentFile(file) {
   if (file.size > COPY_LIMIT) { showPicker(); post({ cmd: "error", message: "too-big" }); return; }
-  const local = new File([await file.arrayBuffer()], file.name, { type: file.type });
-  startLoad(local);
+  span = [0, 40]; curPct = 0; progress("copy", 0, { done: 0, total: file.size });
+  const local = await copyWithProgress(file);
+  span = [40, 100]; curPct = 0;
+  startLoad(local, true);
 }
 
 async function loadGame(file) {
   const input = await waitFor(() => document.getElementById("romInput"));
   const host = await waitFor(() => window.__host);
+  mountSeen = false; progress("core", 3); creep("core", 10);
   const dt = new DataTransfer(); dt.items.add(file);
   input.files = dt.files;
   input.dispatchEvent(new Event("change", { bubbles: true }));
-  await waitFor(() => host.mode === "dolphin" && host.running && host.game && host.game.mounted, 120000, 200)
-    .catch(() => { throw new Error("the core could not boot this disc"); });
+  /* mountSeen: wait for THIS disc, not a game that was already running */
+  await waitFor(() => mountSeen && host.mode === "dolphin" && host.running && host.game && host.game.mounted, 180000, 200)
+    .catch(() => { stopCreep(); throw new Error("the core could not boot this disc"); });
+  stopCreep(); progress("done", 100);
   post({ cmd: "loaded", title: host.game.name || file.name, gameId: host.game.gameId || "" });
   setTimeout(() => {
     const mute = document.getElementById("muteButton");
