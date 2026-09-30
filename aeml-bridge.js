@@ -15,6 +15,7 @@ import { inputStateFromPressed } from "./src/input.js";
 const ALLOWED_PARENTS = [
   /^https:\/\/[a-z0-9-]+\.blogspot\.com$/,
   /^https:\/\/(www\.)?blogger\.com$/,
+  /^https?:\/\/(www\.)?concrete\.tw$/, /* CT's blog (custom domain) */
   /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/
 ];
 
