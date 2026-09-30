@@ -2,6 +2,8 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
+    <!-- AEML, NTUST: isolation loader must run first -->
+    <script src="./aeml-coi.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>wasm-dolphin</title>
     <link rel="icon" href="data:,">
@@ -398,6 +400,8 @@
                             </div>
                             
                             <script type="module" src="./src/bootstrap.js"></script>
+                            <!-- AEML, NTUST: Blogger bridge -->
+                            <script type="module" src="./aeml-bridge.js"></script>
                             </body>
                             </html>
                             
