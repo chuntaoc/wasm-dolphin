@@ -25,7 +25,10 @@ body.en .zh{display:none!important} body:not(.en) .en{display:none!important}
 #dot.ok{background:var(--ok)} #dot.wait{background:var(--acc2)}
 #st{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #top button,.pill{font:inherit;color:var(--txt);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:4px 8px}
-#wm{position:fixed;right:8px;bottom:calc(4px + env(safe-area-inset-bottom));font-size:10px;color:rgba(255,255,255,.3);pointer-events:none;z-index:6}
+#wm{position:fixed;right:8px;bottom:calc(4px + env(safe-area-inset-bottom));font-size:11px;color:rgba(255,255,255,.45);pointer-events:none;z-index:6}
+#link{position:fixed;left:0;right:0;top:calc(40px + env(safe-area-inset-top));bottom:0;z-index:4;background:rgba(5,8,12,.82);display:flex;align-items:center;justify-content:center;pointer-events:none}
+#link .lk{background:#0b1118;border:2px solid var(--acc2);border-radius:14px;padding:16px 18px;max-width:86%;text-align:center;font-size:17px;font-weight:700}
+#link .lkSub{font-size:13px;font-weight:400;color:var(--mut);margin-top:8px}
 #banner{position:fixed;left:10px;right:10px;top:calc(46px + env(safe-area-inset-top));padding:10px 12px;border-radius:10px;background:var(--acc2);color:#1a1000;font-weight:700;z-index:6;text-align:center}
 /* start / settings sheets */
 .sheet{position:fixed;inset:0;z-index:10;background:rgba(5,8,12,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center}
@@ -36,6 +39,7 @@ body.en .zh{display:none!important} body:not(.en) .en{display:none!important}
 .sheet select{font:inherit;padding:8px;border-radius:8px;background:var(--panel);color:var(--txt);border:1px solid var(--line)}
 /* controller */
 #pad{position:fixed;left:0;right:0;bottom:0;top:calc(40px + env(safe-area-inset-top));padding:8px 10px calc(18px + env(safe-area-inset-bottom))}
+button,select,input{touch-action:manipulation}
 .b{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:50%;background:#243345;border:2px solid var(--line);color:var(--txt);font-weight:800;font-size:22px;touch-action:none}
 .b small{font-size:11px;font-weight:400;color:var(--mut)}
 .b.on{background:var(--acc);border-color:var(--acc);color:#021016}
@@ -53,8 +57,9 @@ body.en .zh{display:none!important} body:not(.en) .en{display:none!important}
  <button id="bSet" type="button">⚙</button>
 </div>
 <div id="banner" hidden></div>
+<div id="link"><div class="lk"><div id="linkTxt"></div><div class="lkSub"><span class="zh">電腦頁面需保持開啟、勾選「藍牙／手機連結」</span><span class="en">Keep the emulator page open with Bluetooth / Phone checked</span></div></div></div>
 <div id="pad"></div>
-<div id="wm">AEML, NTUST</div>
+<div id="wm"><span id="aimTxt"></span> <span id="sensTxt" hidden><span class="zh">感測器未啟用</span><span class="en">sensors off</span></span> · AEML, NTUST</div>
 
 <!-- start sheet: one tap to unlock sensors, fullscreen and wake lock -->
 <div class="sheet" id="start">
@@ -90,6 +95,11 @@ body.en .zh{display:none!important} body:not(.en) .en{display:none!important}
  <span data-m="nocode"><span class="zh">網址缺少配對碼，請重新掃描電腦畫面上的 QR code。</span><span class="en">No pairing code. Scan the QR code on the computer again.</span></span>
  <span data-m="nosensor"><span class="zh">感測器未啟用（只能用按鍵）</span><span class="en">Sensors off (buttons only)</span></span>
  <span data-m="calib"><span class="zh">校正：把手機頂端對準電腦畫面上閃爍的點，按 A</span><span class="en">Calibration: point the top of the phone at the flashing dot, press A</span></span>
+ <span data-m="direct"><span class="zh">已找到電腦，建立直接連線中…</span><span class="en">Found the computer, opening a direct link…</span></span>
+ <span data-m="nohost"><span class="zh">找不到電腦頁面（配對碼可能已過期），請重新掃描 QR code。</span><span class="en">Emulator page not found (code may be old). Scan the QR code again.</span></span>
+ <span data-m="tryrelay"><span class="zh">無法直接連線（網路可能隔離手機與電腦），改用網路中繼…</span><span class="en">No direct link (the network may isolate devices); trying a relay…</span></span>
+ <span data-m="relayok"><span class="zh">已連線（網路中繼，反應稍慢）</span><span class="en">Connected (relay, a bit slower)</span></span>
+ <span data-m="nolib"><span class="zh">GitHub 上缺少 peerjs.min.js，請上傳後重新整理。</span><span class="en">peerjs.min.js is missing on GitHub; upload it and reload.</span></span>
  <span data-m="centered"><span class="zh">已置中</span><span class="en">Centered</span></span>
 </div>
 
@@ -223,55 +233,115 @@ body.en .zh{display:none!important} body:not(.en) .en{display:none!important}
     go(); return Promise.resolve();
   }
 
-  /* ---------- link ---------- */
+  /* ---------- link ----------
+   * 1) WebRTC direct (fast). 2) If that is not open within 7 s, a relay over the
+   *    signalling server's WebSocket (works through Wi-Fi client isolation and
+   *    firewalls; slower, so it is throttled to 20 updates/s). */
   var ICE = [
     { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
-    { urls: 'stun:stun.cloudflare.com:3478' },
-    { urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp'],
-      username: 'openrelayproject', credential: 'openrelayproject' }
+    { urls: 'stun:stun.cloudflare.com:3478' }
   ];
-  function peerOpts() {
-    var o = { config: { iceServers: ICE } };
-    var ps = q.get('ps'); /* optional own signalling server: host:port:path:secure */
+  (function () {  /* optional own TURN server passed from the emulator page: url|user|pass */
+    var t = q.get('turn'); if (!t) return;
+    var p = t.split('|'); if (p[0]) ICE.push({ urls: p[0], username: p[1] || '', credential: p[2] || '' });
+  })();
+  function sigServer() {
+    var ps = q.get('ps'), o = { host: '0.peerjs.com', port: 443, path: '/', secure: true };
     if (ps) { var p = ps.split(':'); o.host = p[0]; o.port = +p[1]; o.path = p[2] || '/'; o.secure = p[3] === '1'; }
     return o;
   }
+  function peerOpts() { var s = sigServer(); return { host: s.host, port: s.port, path: s.path, secure: s.secure, config: { iceServers: ICE } }; }
+
+  /* tiny relay client speaking the PeerJS server protocol */
+  function Relay(id, onMsg, onState) {
+    var s = sigServer(), path = s.path.replace(/^\/?/, '/').replace(/\/?$/, '/');
+    var url = (s.secure ? 'wss' : 'ws') + '://' + s.host + ':' + s.port + path + 'peerjs?key=peerjs&id=' +
+      encodeURIComponent(id) + '&token=' + Math.random().toString(36).slice(2) + '&version=1.5.4';
+    var ws = null, hb = 0, open = false, closed = false, self = this;
+    function start() {
+      if (closed) return;
+      try { ws = new WebSocket(url); } catch (e) { onState('error'); return; }
+      ws.onmessage = function (ev) {
+        var m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+        if (m.type === 'OPEN') { open = true; onState('open'); }
+        else if (m.type === 'CANDIDATE' && m.payload && m.payload.aeml === 1) onMsg(m.src, m.payload.d);
+        else if (m.type === 'ID-TAKEN' || m.type === 'ERROR') onState('error');
+      };
+      ws.onclose = function () { open = false; clearInterval(hb); onState('closed'); if (!closed) setTimeout(start, 2000); };
+      ws.onerror = function () {};
+      clearInterval(hb); hb = setInterval(function () { if (ws.readyState === 1) ws.send('{"type":"HEARTBEAT"}'); }, 5000);
+    }
+    this.send = function (dst, d) {
+      if (!ws || ws.readyState !== 1) return false;
+      ws.send(JSON.stringify({ type: 'CANDIDATE', dst: dst, payload: { aeml: 1, d: d } })); return true;
+    };
+    this.isOpen = function () { return open; };
+    this.close = function () { closed = true; clearInterval(hb); try { ws.close(); } catch (e) {} };
+    start();
+  }
+
   var peer = null, conn = null, seq = 0, lastHeard = 0, retryTimer = 0, linkOk = false;
+  var relay = null, relayOk = false, relayTimer = 0, mode = '';
+  var HOST_RELAY = 'aemlwii-' + code + '-r';
+  function linkState(key, cls, extra) { st(key, cls, extra); var o = $('#link'); o.hidden = cls === 'ok'; if (!o.hidden) { var lt = $('#linkTxt'); lt.textContent = ''; Array.prototype.forEach.call($('#st').childNodes, function (n) { lt.appendChild(n.cloneNode(true)); }); } }
   function connect() {
     clearTimeout(retryTimer);
-    if (!/^[A-Z0-9]{6}$/.test(code)) { st('nocode', ''); return; }
-    st('connecting', 'wait', code);
+    if (!/^[A-Z0-9]{6}$/.test(code)) { linkState('nocode', ''); return; }
+    if (!window.Peer) { linkState('nolib', ''); return; }
+    linkState('connecting', 'wait', code);
     try { if (peer) peer.destroy(); } catch (e) {}
+    linkOk = false;
     peer = new Peer(peerOpts());
     peer.on('open', function () {
+      linkState('direct', 'wait', code);
       conn = peer.connect('aemlwii-' + code, { reliable: false, serialization: 'json' });
       conn.on('open', function () {
-        linkOk = true; lastHeard = Date.now(); dirty = true; send(true);
+        linkOk = true; lastHeard = Date.now(); dirty = true; send();
         reportRoute();
       });
       conn.on('data', onData);
       conn.on('close', lost);
       conn.on('error', lost);
     });
-    peer.on('error', function (e) { st('lost', 'wait', e && e.type ? '(' + e.type + ')' : ''); retry(); });
-    peer.on('disconnected', function () { try { peer.reconnect(); } catch (e) { retry(); } });
+    peer.on('error', function (e) {
+      if (e && e.type === 'peer-unavailable') { linkState('nohost', 'wait'); retry(5000); return; }
+      linkState('lost', 'wait', e && e.type ? '(' + e.type + ')' : ''); retry(3000);
+    });
+    peer.on('disconnected', function () { try { peer.reconnect(); } catch (e) { retry(3000); } });
+    clearTimeout(relayTimer);
+    relayTimer = setTimeout(function () { if (!linkOk) startRelay(); }, 7000);
   }
-  function lost() { if (!linkOk) return; linkOk = false; st('lost', 'wait'); retry(); }
-  function retry() { clearTimeout(retryTimer); retryTimer = setTimeout(connect, 2000); }
+  function startRelay() {
+    if (relay) return;
+    linkState('tryrelay', 'wait');
+    relay = new Relay('aemlwiip-' + Math.random().toString(36).slice(2, 12), function (src, d) {
+      if (src !== HOST_RELAY) return;
+      if (d && d.t === 'ack') { if (!relayOk) { relayOk = true; dirty = true; if (!linkOk) linkState('relayok', 'ok'); } }
+      onData(d);
+    }, function (state) {
+      if (state === 'open') relay.send(HOST_RELAY, { t: 'hello', sig: SIG });
+      if (state === 'closed') relayOk = false;
+    });
+    /* keep saying hello until the emulator page answers */
+    setTimeout(function () { if (relay && !relayOk && !linkOk) linkState('nohost', 'wait'); }, 9000);
+    (function hello() { if (!relay) return; if (!relayOk && relay.isOpen()) relay.send(HOST_RELAY, { t: 'hello', sig: SIG }); setTimeout(hello, relayOk ? 3000 : 1500); })();
+  }
+  function lost() { if (!linkOk) return; linkOk = false; if (relayOk) { linkState('relayok', 'ok'); return; } linkState('lost', 'wait'); retry(2000); startRelay(); }
+  function retry(ms) { clearTimeout(retryTimer); retryTimer = setTimeout(connect, ms || 2000); }
   function reportRoute() {
-    /* tell the user whether this is a direct or relayed connection */
     var pc = conn && conn.peerConnection;
-    if (!pc || !pc.getStats) { st('connected', 'ok'); return; }
+    if (relay) { relay.close(); relay = null; relayOk = false; }   /* direct link up: drop the relay */
+    linkState('connected', 'ok');
+    if (!pc || !pc.getStats) return;
     pc.getStats().then(function (rep) {
-      var relay = false;
+      var r2 = false;
       rep.forEach(function (r) {
         if (r.type === 'candidate-pair' && r.state === 'succeeded' && r.nominated) {
-          var l = rep.get(r.localCandidateId);
-          if (l && l.candidateType === 'relay') relay = true;
+          var l = rep.get(r.localCandidateId); if (l && l.candidateType === 'relay') r2 = true;
         }
       });
-      st(relay ? 'relay' : 'connected', 'ok');
-    }).catch(function () { st('connected', 'ok'); });
+      if (r2) linkState('relay', 'ok');
+    }).catch(function () {});
   }
   function onData(d) {
     lastHeard = Date.now();
@@ -287,14 +357,19 @@ body.en .zh{display:none!important} body:not(.en) .en{display:none!important}
     if (d.t === 'rumble' && cfg.vib && navigator.vibrate) { try { navigator.vibrate(d.on ? 200 : 0); } catch (e) {} }
   }
   function onA() { /* during calibration the page reads the A press itself */ }
+  function sendRaw(obj) {
+    if (conn && conn.open) { try { conn.send(obj); return true; } catch (e) {} }
+    if (relay && relayOk) return relay.send(HOST_RELAY, obj);
+    return false;
+  }
   $('#bRecenter').onclick = function () {
     recenterCount++; dirty = true; vib();
     var b = $('#banner'); b.textContent = ''; b.appendChild(document.querySelector('#msgs [data-m="centered"]').cloneNode(true));
     b.hidden = false; setTimeout(function () { if (calibStep < 0) b.hidden = true; }, 900);
   };
-  $('#bCalib').onclick = function () { if (conn && conn.open) conn.send({ t: 'calibStart', sig: SIG }); vib(); };
+  $('#bCalib').onclick = function () { sendRaw({ t: 'calibStart', sig: SIG }); vib(); };
 
-  /* ---------- send loop: every frame while sensors run, else on change + keep-alive ---------- */
+  /* ---------- send loop ---------- */
   var dirty = true, lastSend = 0;
   function packet() {
     var g = grip(), b = {};
@@ -305,28 +380,61 @@ body.en .zh{display:none!important} body:not(.en) .en{display:none!important}
       ori: ori, acc: cfg.tilt ? acc : null, gyro: (cfg.mp && sensorsOn) ? gyro : null, mp: cfg.mp && sensorsOn
     };
   }
-  function send(force) {
-    if (!conn || !conn.open) return;
-    try { conn.send(packet()); lastSend = Date.now(); dirty = false; } catch (e) {}
-  }
+  function send() { if (sendRaw(packet())) { lastSend = Date.now(); dirty = false; } }
   (function loop() {
-    var now = Date.now();
-    if (conn && conn.open && (dirty || now - lastSend > 250)) send();
+    var now = Date.now(), direct = conn && conn.open;
+    if (direct || relayOk) {
+      var minGap = direct ? 0 : 50, keep = direct ? 250 : 1000;   /* relay: max 20/s */
+      if ((dirty && now - lastSend >= minGap) || now - lastSend > keep) send();
+    }
+    if (ori) $('#aimTxt').textContent = Math.round(wrapDeg(ori.yaw)) + '° / ' + Math.round(ori.pitch) + '°';
     requestAnimationFrame(loop);
   })();
-  document.addEventListener('visibilitychange', function () { if (!document.hidden && (!conn || !conn.open)) connect(); });
+  function wrapDeg(d) { return ((d + 180) % 360 + 360) % 360 - 180; }
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && !(conn && conn.open) && !relayOk) connect(); });
+
+  /* ---------- no zooming (iOS ignores user-scalable=no) ---------- */
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (t) {
+    document.addEventListener(t, function (e) { e.preventDefault(); }, { passive: false });
+  });
+  document.addEventListener('touchstart', function (e) {
+    if (e.touches.length > 1 || (e.target.closest && e.target.closest('#pad'))) e.preventDefault();
+  }, { passive: false });
+  document.addEventListener('touchmove', function (e) { if (!(e.target.closest && e.target.closest('select'))) e.preventDefault(); }, { passive: false });
+  var lastTouchEnd = 0;
+  document.addEventListener('touchend', function (e) {
+    var now = Date.now();
+    if (now - lastTouchEnd < 350 && !(e.target.closest && e.target.closest('select,input,button'))) e.preventDefault();
+    lastTouchEnd = now;
+  }, { passive: false });
+  document.addEventListener('dblclick', function (e) { e.preventDefault(); }, { passive: false });
+  function unzoom() {
+    var m = document.querySelector('meta[name=viewport]'), c = m.getAttribute('content');
+    m.setAttribute('content', c + ',minimum-scale=1');
+    setTimeout(function () { m.setAttribute('content', c); window.scrollTo(0, 0); }, 250);
+  }
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', function () {
+    if (window.visualViewport.scale > 1.02) unzoom();
+  });
 
   /* ---------- start ---------- */
   var wakeLock = null;
   $('#go').onclick = function () {
+    /* iOS: both permission prompts must be requested inside this tap */
+    var asks = [];
+    try { if (typeof DeviceMotionEvent !== 'undefined' && DeviceMotionEvent.requestPermission) asks.push(DeviceMotionEvent.requestPermission()); } catch (e) {}
+    try { if (typeof DeviceOrientationEvent !== 'undefined' && DeviceOrientationEvent.requestPermission) asks.push(DeviceOrientationEvent.requestPermission()); } catch (e) {}
     var el = document.documentElement;
-    try { (el.requestFullscreen || el.webkitRequestFullscreen || function () {}).call(el); } catch (e) {}
-    try { if (navigator.wakeLock) navigator.wakeLock.request('screen').then(function (w) { wakeLock = w; }); } catch (e) {}
-    startSensors().then(function () { $('#start').hidden = true; layout(); }, function () {
-      $('#start').hidden = true; layout(); if (!linkOk) return; st('nosensor', 'ok');
+    try { var fs = el.requestFullscreen || el.webkitRequestFullscreen; if (fs) { var r = fs.call(el); if (r && r.catch) r.catch(function () {}); } } catch (e) {}
+    try { if (navigator.wakeLock) navigator.wakeLock.request('screen').then(function (w) { wakeLock = w; }).catch(function () {}); } catch (e) {}
+    Promise.all(asks).then(function (res) {
+      if (res.some(function (r) { return r !== 'granted'; })) throw new Error('denied');
+      window.addEventListener('devicemotion', onMotion); window.addEventListener('deviceorientation', onOrient);
+      $('#start').hidden = true; layout();
+    }).catch(function () {
+      $('#start').hidden = true; layout(); $('#sensTxt').hidden = false;
     });
   };
-  layout();
   connect();
   console.log('%cAEML, NTUST - Wii phone controller', 'color:#22c3ee;font-weight:bold');
 })();
