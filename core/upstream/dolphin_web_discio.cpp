@@ -844,6 +844,61 @@ void SetInputState(std::uint32_t mask, int stick_x, int stick_y, int c_stick_x, 
   s_input_update_count.fetch_add(1, std::memory_order_relaxed);
 }
 
+// ---------------------------------------------------------------------------
+// Browser Wii Remote input (AEML, NTUST). Read by WiimoteEmu::Wiimote through
+// DolphinWeb_GetWiimoteState(); layout must match WiimoteEmu.cpp.
+struct DolphinWebWiimoteState
+{
+  std::uint32_t buttons;
+  std::int32_t extension;
+  float stick_x, stick_y;
+  float ir_x, ir_y;
+  std::int32_t ir_visible;
+  float accel_x, accel_y, accel_z;
+};
+static std::mutex s_wiimote_mutex;
+static DolphinWebWiimoteState s_wiimote{0, 0, 0.f, 0.f, 0.f, 0.f, 1, 0.f, 0.f, 1.f};
+static bool s_wiimote_active = false;
+
+static float ClampUnit(float v, float lo, float hi)
+{
+  return (v == v) ? std::clamp(v, lo, hi) : 0.f;  // NaN -> 0
+}
+
+#ifdef __EMSCRIPTEN__
+EMSCRIPTEN_KEEPALIVE
+#endif
+void SetWiimoteState(std::uint32_t buttons, int extension, float stick_x, float stick_y,
+                     float ir_x, float ir_y, int ir_visible, float accel_x, float accel_y,
+                     float accel_z)
+{
+  DolphinWebWiimoteState next;
+  next.buttons = buttons & 0x3fffu;
+  next.extension = extension == 1 ? 1 : 0;
+  next.stick_x = ClampUnit(stick_x, -1.f, 1.f);
+  next.stick_y = ClampUnit(stick_y, -1.f, 1.f);
+  next.ir_x = ClampUnit(ir_x, -1.f, 1.f);
+  next.ir_y = ClampUnit(ir_y, -1.f, 1.f);
+  next.ir_visible = ir_visible ? 1 : 0;
+  next.accel_x = ClampUnit(accel_x, -8.f, 8.f);
+  next.accel_y = ClampUnit(accel_y, -8.f, 8.f);
+  next.accel_z = ClampUnit(accel_z, -8.f, 8.f);
+  const std::lock_guard<std::mutex> lock(s_wiimote_mutex);
+  s_wiimote = next;
+  s_wiimote_active = true;
+}
+
+int DolphinWeb_GetWiimoteState(int index, DolphinWebWiimoteState* out)
+{
+  if (!out || index != 0)
+    return 0;
+  const std::lock_guard<std::mutex> lock(s_wiimote_mutex);
+  if (!s_wiimote_active)
+    return 0;
+  *out = s_wiimote;
+  return 1;
+}
+
 int SetPresentationScale(float scale)
 {
   if (scale < 0.25f || scale > 1.0f)

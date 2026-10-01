@@ -44,6 +44,10 @@
 #include "Core/State.h"
 #include "Core/System.h"
 
+#include "Core/HW/Wiimote.h"
+#include "Core/HW/WiimoteEmu/DesiredWiimoteState.h"
+#include "Core/HW/WiimoteEmu/WiimoteEmu.h"
+#include "InputCommon/InputConfig.h"
 #include "InputCommon/ControllerInterface/ControllerInterface.h"
 
 #include "VideoCommon/Fifo.h"
@@ -646,6 +650,9 @@ void EnsureRuntime()
   Pad::Initialize();
   Pad::InitializeGBA();
   Keyboard::Initialize();
+  // AEML, NTUST: create the emulated Wii Remotes so Wii titles see a
+  // connected remote; its input comes from SetWiimoteState() (discio bridge).
+  Wiimote::Initialize(Wiimote::InitializeMode::DO_NOT_WAIT_FOR_WIIMOTES);
 
   // §27 savestate-load backend resync. Probe evidence: after
   // State::Load the WebGPU command-ring producer (the dual-core GPU
@@ -814,8 +821,40 @@ std::unique_ptr<GBAHostInterface> Host_CreateGBAHost(std::weak_ptr<HW::GBA::Core
   return nullptr;
 }
 
+// AEML, NTUST: Wii Remote input self-test. Runs the same PrepareInput() call
+// the Wii Bluetooth stack makes every 5 ms and reports what the emulated
+// remote would send, so the browser hook can be verified without a game.
+static std::string AemlDescribeWiimote()
+{
+  InputConfig* config = Wiimote::GetConfig();
+  if (!config || config->ControllersNeedToBeCreated())
+    return "not-initialized";
+  auto* wiimote = static_cast<WiimoteEmu::Wiimote*>(config->GetController(0));
+  if (!wiimote)
+    return "no-wiimote";
+  WiimoteEmu::DesiredWiimoteState state;
+  wiimote->PrepareInput(&state, WiimoteCommon::HIDWiimote::SensorBarState::Enabled);
+  const auto& cam = state.camera_points[0].position;
+  const auto& acc = state.acceleration.value;
+  return "buttons=" + std::to_string(state.buttons.hex) +
+         " ext=" + std::to_string(state.extension.data.index()) +
+         " cam0=" + std::to_string(cam.x) + "," + std::to_string(cam.y) +
+         " accel=" + std::to_string(acc.x) + "," + std::to_string(acc.y) + "," +
+         std::to_string(acc.z);
+}
+
 extern "C"
 {
+#ifdef __EMSCRIPTEN__
+EMSCRIPTEN_KEEPALIVE
+#endif
+const char* AemlWiimoteSelfTest()
+{
+  static std::string s_result;
+  s_result = AemlDescribeWiimote();
+  return s_result.c_str();
+}
+
 int CoreInit()
 {
   EnsureRuntime();

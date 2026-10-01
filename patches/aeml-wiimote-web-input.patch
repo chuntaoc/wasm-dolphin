@@ -1,0 +1,192 @@
+diff --git a/Source/Core/Core/CMakeLists.txt b/Source/Core/Core/CMakeLists.txt
+index 1bde8d4e7b..d17b6a27c9 100644
+--- a/Source/Core/Core/CMakeLists.txt
++++ b/Source/Core/Core/CMakeLists.txt
+@@ -934,7 +934,7 @@ if(EMSCRIPTEN AND DOLPHIN_WASM_CORE_SOURCE)
+     "-sSTACK_SIZE=5242880"
+     "-sDEFAULT_PTHREAD_STACK_SIZE=5242880"
+     "-sPTHREAD_POOL_SIZE=16"
+-    "-sEXPORTED_FUNCTIONS=['_CoreInit','_SetVideoBackend','_SetCpuThread','_SetCpuCore','_SetCpuOverclock','_SetEmulationSpeed','_SetPresentationScale','_SetFastSoftwareRaster','_SetSoftwareTevHotCaseMode','_SetPpcWasmJitEnabled','_SetPpcProfileEnabled','_SetCachedInterpreterDisableMask','_GetCachedInterpreterDisableMask','_SetRendererFeatureMask','_GetRendererFeatureMask','_GetFrameRingEntryPtr','_GetFrameRingCapacity','_GetFrameRingEntrySize','_GetFrameRingHead','_GetPpcProfileStats','_BootDisc','_StopCore','_SetCorePaused','_ResetCore','_SaveCoreState','_LoadCoreState','_LoadStateFile','_SaveStateFile','_PumpHostJobs','_GetCoreState','_GetCoreStateName','_GetCoreStatus','_GetCoreTitle','_GetCoreTicksLow','_GetCoreTicksHigh','_GetCoreTicksPerSecond','_GetPPCPC','_GetLastLoadedCoreTicksLow','_GetLastLoadedCoreTicksHigh','_GetLastLoadedPPCPC','_GetLastLoadedCheckpointGeneration','_GetCPUCoreName','_AudioSampleRate','_AudioChannels','_AudioBufferFrames','_AudioBuffer','_MixAudio','_SetAudioMuted','_GetAudioStats','_GetPpcWasmBlockCompileCount','_GetPpcWasmBlockRunCount','_GetPpcWasmHelperStats','_SetWebGpuStateCacheEnabled','_SetWebGpuUboCacheEnabled','_SetWebGpuUboPackEnabled','_SetWebGpuGeometryPackEnabled','_SetWebGpuGeometryRangeEnabled','_SetWebGpuUploadArenaMiB','_SetWebGpuOwnershipTraceEnabled','_AcknowledgeWebGpuOwnershipTraceCapture','_GetWebGpuOwnershipTracePtr','_GetWebGpuOwnershipTraceCapacity','_SetWebGpuProducerProfileEnabled','_SetWebGpuDrawProfileEnabled','_SetWgpuDeepDiagnosticsEnabled','_SetWgpuIdleFifoTailElisionEnabled','_RunWebGpuDenseUboPacketSmoke','_RunWebGpuDenseUboRollbackSmoke','_GetWebGpuDenseUboSmokeError','_GetWebGpuStateCacheStats','_DolphinWeb_RecordModuleUs','_DolphinWeb_RecordInstanceUs','_DolphinWeb_RecordCacheHit','_DolphinWeb_RecordCacheMiss','_TestPpcWasmDirectCandidate','_TestDcbxLoopPattern','_TestPpcWasmDirectCandidateCompiles','_RunPpcWasmMultipleWordMemorySmoke','_RunPpcWasmSinglePrecisionArithmeticSmoke','_RunPpcWasmDoublePrecisionArithmeticSmoke','_RunPpcWasmPairedQuantizedMemorySmoke','_RunPpcWasmFloatCompareSmoke','_GetVideoStats','_RunWasmJitSmoke','_RunPpcWasmAddiSmoke','_RunPpcWasmStateAddiSmoke','_RunPpcWasmDolphinStateAddiSmoke','_RunPpcWasmIntegerBlockSmoke','_MountDisc','_Reset','_SetInputMask','_SetInputState','_RunFrame','_FrameWidth','_FrameHeight','_FrameBuffer','_SaveState','_LoadState','_GetFrame','_GetFrameSignalPtr','_GetGameId','_GetGameTitle','_GetMakerId','_GetPlatform','_GetRegion','_GetDiscNumber','_GetApploaderDate','_GetApploaderSize','_GetBootDolOffset','_GetBootDolSize','_GetFstOffset','_GetFstSize','_GetRawSize','_GetDataSize','_GetRootEntryCount','_GetRootEntryName','_GetRootEntryPath','_GetRootEntryIsDirectory','_GetRootEntryOffset','_GetRootEntrySize','_ReadDisc','_ReadDiscFile','_malloc','_free']"
++    "-sEXPORTED_FUNCTIONS=['_CoreInit','_SetVideoBackend','_SetCpuThread','_SetCpuCore','_SetCpuOverclock','_SetEmulationSpeed','_SetPresentationScale','_SetFastSoftwareRaster','_SetSoftwareTevHotCaseMode','_SetPpcWasmJitEnabled','_SetPpcProfileEnabled','_SetCachedInterpreterDisableMask','_GetCachedInterpreterDisableMask','_SetRendererFeatureMask','_GetRendererFeatureMask','_GetFrameRingEntryPtr','_GetFrameRingCapacity','_GetFrameRingEntrySize','_GetFrameRingHead','_GetPpcProfileStats','_BootDisc','_StopCore','_SetCorePaused','_ResetCore','_SaveCoreState','_LoadCoreState','_LoadStateFile','_SaveStateFile','_PumpHostJobs','_GetCoreState','_GetCoreStateName','_GetCoreStatus','_GetCoreTitle','_GetCoreTicksLow','_GetCoreTicksHigh','_GetCoreTicksPerSecond','_GetPPCPC','_GetLastLoadedCoreTicksLow','_GetLastLoadedCoreTicksHigh','_GetLastLoadedPPCPC','_GetLastLoadedCheckpointGeneration','_GetCPUCoreName','_AudioSampleRate','_AudioChannels','_AudioBufferFrames','_AudioBuffer','_MixAudio','_SetAudioMuted','_GetAudioStats','_GetPpcWasmBlockCompileCount','_GetPpcWasmBlockRunCount','_GetPpcWasmHelperStats','_SetWebGpuStateCacheEnabled','_SetWebGpuUboCacheEnabled','_SetWebGpuUboPackEnabled','_SetWebGpuGeometryPackEnabled','_SetWebGpuGeometryRangeEnabled','_SetWebGpuUploadArenaMiB','_SetWebGpuOwnershipTraceEnabled','_AcknowledgeWebGpuOwnershipTraceCapture','_GetWebGpuOwnershipTracePtr','_GetWebGpuOwnershipTraceCapacity','_SetWebGpuProducerProfileEnabled','_SetWebGpuDrawProfileEnabled','_SetWgpuDeepDiagnosticsEnabled','_SetWgpuIdleFifoTailElisionEnabled','_RunWebGpuDenseUboPacketSmoke','_RunWebGpuDenseUboRollbackSmoke','_GetWebGpuDenseUboSmokeError','_GetWebGpuStateCacheStats','_DolphinWeb_RecordModuleUs','_DolphinWeb_RecordInstanceUs','_DolphinWeb_RecordCacheHit','_DolphinWeb_RecordCacheMiss','_TestPpcWasmDirectCandidate','_TestDcbxLoopPattern','_TestPpcWasmDirectCandidateCompiles','_RunPpcWasmMultipleWordMemorySmoke','_RunPpcWasmSinglePrecisionArithmeticSmoke','_RunPpcWasmDoublePrecisionArithmeticSmoke','_RunPpcWasmPairedQuantizedMemorySmoke','_RunPpcWasmFloatCompareSmoke','_GetVideoStats','_RunWasmJitSmoke','_RunPpcWasmAddiSmoke','_RunPpcWasmStateAddiSmoke','_RunPpcWasmDolphinStateAddiSmoke','_RunPpcWasmIntegerBlockSmoke','_MountDisc','_Reset','_SetInputMask','_SetInputState','_SetWiimoteState','_RunFrame','_FrameWidth','_FrameHeight','_FrameBuffer','_SaveState','_LoadState','_GetFrame','_GetFrameSignalPtr','_GetGameId','_GetGameTitle','_GetMakerId','_GetPlatform','_GetRegion','_GetDiscNumber','_GetApploaderDate','_GetApploaderSize','_GetBootDolOffset','_GetBootDolSize','_GetFstOffset','_GetFstSize','_GetRawSize','_GetDataSize','_GetRootEntryCount','_GetRootEntryName','_GetRootEntryPath','_GetRootEntryIsDirectory','_GetRootEntryOffset','_GetRootEntrySize','_ReadDisc','_ReadDiscFile','_malloc','_free']"
+     # WORKERFS and NODEFS are named here so they survive dead-code
+     # elimination. -lworkerfs.js / -lnodefs.js above only make the JS
+     # libraries available to the link; current Emscripten still drops a JS
+diff --git a/Source/Core/Core/HW/WiimoteEmu/WiimoteEmu.cpp b/Source/Core/Core/HW/WiimoteEmu/WiimoteEmu.cpp
+index 7fc81f6321..4617cf871c 100644
+--- a/Source/Core/Core/HW/WiimoteEmu/WiimoteEmu.cpp
++++ b/Source/Core/Core/HW/WiimoteEmu/WiimoteEmu.cpp
+@@ -3,6 +3,11 @@
+ 
+ #include "Core/HW/WiimoteEmu/WiimoteEmu.h"
+ 
++#include <cmath>
++#include <cstdint>
++#include <optional>
++#include <string_view>
++
+ #include <algorithm>
+ #include <fstream>
+ #include <memory>
+@@ -20,6 +25,7 @@
+ #include "Common/MathUtil.h"
+ 
+ #include "Core/Config/MainSettings.h"
++#include "Core/Config/SYSCONFSettings.h"
+ #include "Core/Core.h"
+ #include "Core/HW/Wiimote.h"
+ 
+@@ -476,9 +482,121 @@ GetPassthroughCameraPoints(ControllerEmu::IRPassthrough* ir_passthrough)
+   return camera_points;
+ }
+ 
++#ifdef __EMSCRIPTEN__
++// ---------------------------------------------------------------------------
++// Browser Wii Remote input (AEML, NTUST). The page sends one snapshot per
++// input change through SetWiimoteState() (dolphin_web_discio.cpp); here it
++// is applied through Dolphin's own input-override hook, so buttons, D-pad,
++// accelerometer and Nunchuk go through the normal emulation path.
++// Layout must match dolphin_web_discio.cpp.
++struct DolphinWebWiimoteState
++{
++  std::uint32_t buttons;
++  std::int32_t extension;  // 0 = none, 1 = Nunchuk
++  float stick_x, stick_y;  // -1..1, +y = up
++  float ir_x, ir_y;        // -1..1, +y = up
++  std::int32_t ir_visible;
++  float accel_x, accel_y, accel_z;  // in g, Wii Remote axes
++};
++extern "C" int DolphinWeb_GetWiimoteState(int index, DolphinWebWiimoteState* out);
++
++namespace
++{
++enum : std::uint32_t
++{
++  WEB_UP = 1u << 0, WEB_DOWN = 1u << 1, WEB_LEFT = 1u << 2, WEB_RIGHT = 1u << 3,
++  WEB_A = 1u << 4, WEB_B = 1u << 5, WEB_ONE = 1u << 6, WEB_TWO = 1u << 7,
++  WEB_PLUS = 1u << 8, WEB_MINUS = 1u << 9, WEB_HOME = 1u << 10,
++  WEB_C = 1u << 11, WEB_Z = 1u << 12, WEB_SHAKE = 1u << 13,
++};
++
++std::optional<ControlState> WebBit(std::uint32_t buttons, std::uint32_t bit)
++{
++  return (buttons & bit) ? 1.0 : 0.0;
++}
++}  // namespace
++#endif
++
+ void Wiimote::BuildDesiredWiimoteState(DesiredWiimoteState* target_state,
+                                        SensorBarState sensor_bar_state)
+ {
++#ifdef __EMSCRIPTEN__
++  DolphinWebWiimoteState web{};
++  const bool web_active = DolphinWeb_GetWiimoteState(m_index, &web) != 0;
++  if (web_active)
++  {
++    // Shake: oscillate the accelerometer, the way a real shake reads (~6 Hz, +-2.5 g).
++    static std::uint32_t s_shake_tick = 0;
++    Common::Vec3 accel(web.accel_x, web.accel_y, web.accel_z);
++    accel = accel * float(GRAVITY_ACCELERATION);
++    if (web.buttons & WEB_SHAKE)
++    {
++      const float phase = float(MathUtil::TAU) * 6.f * float(++s_shake_tick) / ::Wiimote::UPDATE_FREQ;
++      const float amount = 2.5f * float(GRAVITY_ACCELERATION) * std::sin(phase);
++      accel += Common::Vec3(amount, amount, amount);
++    }
++    else
++    {
++      s_shake_tick = 0;
++    }
++
++    SetInputOverrideFunction([web, accel](std::string_view group, std::string_view control,
++                                          ControlState) -> std::optional<ControlState> {
++      const std::uint32_t b = web.buttons;
++      if (group == BUTTONS_GROUP)
++      {
++        if (control == A_BUTTON) return WebBit(b, WEB_A);
++        if (control == B_BUTTON) return WebBit(b, WEB_B);
++        if (control == ONE_BUTTON) return WebBit(b, WEB_ONE);
++        if (control == TWO_BUTTON) return WebBit(b, WEB_TWO);
++        if (control == MINUS_BUTTON) return WebBit(b, WEB_MINUS);
++        if (control == PLUS_BUTTON) return WebBit(b, WEB_PLUS);
++        if (control == HOME_BUTTON) return WebBit(b, WEB_HOME);
++      }
++      else if (group == DPAD_GROUP)
++      {
++        if (control == DIRECTION_UP) return WebBit(b, WEB_UP);
++        if (control == DIRECTION_DOWN) return WebBit(b, WEB_DOWN);
++        if (control == DIRECTION_LEFT) return WebBit(b, WEB_LEFT);
++        if (control == DIRECTION_RIGHT) return WebBit(b, WEB_RIGHT);
++      }
++      else if (group == ACCELEROMETER_GROUP)
++      {
++        if (control == ControllerEmu::ReshapableInput::X_INPUT_OVERRIDE) return accel.x;
++        if (control == ControllerEmu::ReshapableInput::Y_INPUT_OVERRIDE) return accel.y;
++        if (control == ControllerEmu::ReshapableInput::Z_INPUT_OVERRIDE) return accel.z;
++      }
++      else if (group == IR_GROUP)
++      {
++        if (control == ControllerEmu::ReshapableInput::X_INPUT_OVERRIDE) return web.ir_x;
++        if (control == ControllerEmu::ReshapableInput::Y_INPUT_OVERRIDE) return web.ir_y;
++      }
++      return std::nullopt;
++    });
++
++    // Attach or detach the Nunchuk as the page asks.
++    const u32 wanted = web.extension == 1 ? u32(ExtensionNumber::NUNCHUK) : u32(ExtensionNumber::NONE);
++    if (m_attachments->GetSelectedAttachment() != wanted)
++      m_attachments->SetSelectedAttachment(wanted);
++
++    auto& nunchuk = m_attachments->GetAttachmentList()[u32(ExtensionNumber::NUNCHUK)];
++    nunchuk->SetInputOverrideFunction([web](std::string_view group, std::string_view control,
++                                            ControlState) -> std::optional<ControlState> {
++      if (group == Nunchuk::BUTTONS_GROUP)
++      {
++        if (control == Nunchuk::C_BUTTON) return WebBit(web.buttons, WEB_C);
++        if (control == Nunchuk::Z_BUTTON) return WebBit(web.buttons, WEB_Z);
++      }
++      else if (group == Nunchuk::STICK_GROUP)
++      {
++        if (control == ControllerEmu::ReshapableInput::X_INPUT_OVERRIDE) return web.stick_x;
++        if (control == ControllerEmu::ReshapableInput::Y_INPUT_OVERRIDE) return web.stick_y;
++      }
++      return std::nullopt;
++    });
++  }
++#endif
++
+   // Hotkey / settings modifier
+   // Data is later accessed in IsSideways and IsUpright
+   m_hotkeys->UpdateState();
+@@ -516,6 +634,32 @@ void Wiimote::BuildDesiredWiimoteState(DesiredWiimoteState* target_state,
+     target_state->camera_points = DesiredWiimoteState::DEFAULT_CAMERA;
+   }
+ 
++#ifdef __EMSCRIPTEN__
++  if (web_active && sensor_bar_state == SensorBarState::Enabled)
++  {
++    if (web.ir_visible)
++    {
++      // Same geometry as EmulatePoint(): 2 m from the bar, aimed by the pointer.
++      const bool sensor_bar_on_top = Config::Get(Config::SYSCONF_SENSOR_BAR_POSITION) != 0;
++      const float height = m_ir->GetVerticalOffset() * (sensor_bar_on_top ? 1 : -1);
++      const float yaw_scale = m_ir->GetTotalYaw() / 2;
++      const float pitch_scale = m_ir->GetTotalPitch() / 2;
++      const Common::Vec3 position{0, 2.f, -height};
++      const Common::Vec3 angle(pitch_scale * -web.ir_y, 0, yaw_scale * -web.ir_x);
++      const auto transform = Common::Matrix44::FromMatrix33(GetRotationalMatrix(-angle)) *
++                             Common::Matrix44::Translate(-position);
++      target_state->camera_points = CameraLogic::GetCameraPoints(
++          transform,
++          Common::Vec2(m_fov_x_setting.GetValue(), m_fov_y_setting.GetValue()) / 360 *
++              float(MathUtil::TAU));
++    }
++    else
++    {
++      target_state->camera_points = DesiredWiimoteState::DEFAULT_CAMERA;
++    }
++  }
++#endif
++
+   // Calculate MotionPlus state.
+   if (m_motion_plus_setting.GetValue())
+     target_state->motion_plus = MotionPlus::GetGyroscopeData(GetTotalAngularVelocity());

@@ -978,6 +978,11 @@ async function handleMessage(type, payload) {
       inputMask = payload.mask >>> 0;
       api?.setInputMask(inputMask);
       return {};
+    case "setWiimoteState":
+      api?.setWiimoteState?.(payload);
+      return {};
+    case "aemlWiimoteSelfTest":
+      return { result: api?.aemlWiimoteSelfTest ? api.aemlWiimoteSelfTest() : "unsupported" };
     case "setInputState":
       applyInputStateSnapshot({
         mask: payload.mask,
@@ -2376,6 +2381,29 @@ function bindApi(module) {
     getVideoStats: optionalCwrap("GetVideoStats", "string", []),
     reset: cwrap("Reset", null, []),
     setInputMask: cwrap("SetInputMask", null, ["number"]),
+    // AEML, NTUST: browser Wii Remote input.
+    aemlWiimoteSelfTest: optionalCwrap("AemlWiimoteSelfTest", "string", []),
+    setWiimoteState:
+      typeof module._SetWiimoteState === "function"
+        ? (s) =>
+            ccall(
+              "SetWiimoteState",
+              null,
+              ["number", "number", "number", "number", "number", "number", "number", "number", "number", "number"],
+              [
+                s.buttons >>> 0,
+                s.extension | 0,
+                +s.stickX || 0,
+                +s.stickY || 0,
+                +s.irX || 0,
+                +s.irY || 0,
+                s.irVisible ? 1 : 0,
+                +s.accelX || 0,
+                +s.accelY || 0,
+                s.accelZ === undefined ? 1 : +s.accelZ || 0
+              ]
+            )
+        : null,
     setInputState:
       typeof module._SetInputState === "function"
         ? (state) =>

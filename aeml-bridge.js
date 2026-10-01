@@ -1,9 +1,9 @@
 /* =====================================================================
  * AEML Wii bridge -- (c) AEML, NTUST
  * Connects the AEML Blogger shell (parent page) to wasm-dolphin's host.
- * Messages in : hello, pick, load, input, saveState, loadState
+ * Messages in : hello, pick, load, input, saveState, loadState, diag, diagExport
  * Messages out: ready, ack, picked, progress, loaded, state, stateLoaded,
- *               needGesture, gestureDone, error
+ *               needGesture, gestureDone, diagStat, diagLog, error
  * SPDX-License-Identifier: GPL-2.0-or-later (combined with Dolphin)
  * ===================================================================== */
 import { inputStateFromPressed } from "./src/input.js";
@@ -22,7 +22,7 @@ const ALLOWED_PARENTS = [
 const params = new URLSearchParams(location.search);
 const EMBED = params.get("embed") === "aeml" && window.parent !== window;
 const SIG = "AEML, NTUST";
-const BRIDGE_VER = "1.3";
+const BRIDGE_VER = "1.5";
 let parentOrigin = null;
 
 function allowed(origin) { return ALLOWED_PARENTS.some((re) => re.test(origin)); }
@@ -80,13 +80,29 @@ function askGesture() {
   post({ cmd: "needGesture" });
 }
 
-/* ---- Wii Remote (shell) -> GameCube pad (this core) ----
- * The core has no Wii Remote input yet; its pad input drives GameCube
- * titles and Wii titles that accept a GameCube controller. */
+/* ---- shell controller -> core ----
+ * Sent both ways: as a GameCube pad (GameCube titles) and, on cores built
+ * with the AEML Wii Remote hook, as an emulated Wii Remote (+ Nunchuk). */
 const MAP = { A: "A", B: "B", ONE: "X", TWO: "Y", PLUS: "START", MINUS: "Z",
   C: "L", Z: "R", SHAKE: "R", UP: "D_UP", DOWN: "D_DOWN", LEFT: "D_LEFT", RIGHT: "D_RIGHT" };
+/* Bit layout shared with SetWiimoteState() in the core (WiimoteEmu.cpp). */
+const WII_BITS = { UP: 1, DOWN: 2, LEFT: 4, RIGHT: 8, A: 16, B: 32, ONE: 64, TWO: 128,
+  PLUS: 256, MINUS: 512, HOME: 1024, C: 2048, Z: 4096, SHAKE: 8192 };
 function toByte(v) { v = Math.max(-1, Math.min(1, +v || 0)); return Math.round(0x80 + v * 0x7f) & 0xff; }
+let lastInput = null, lastInputSig = "";
 function applyInput(s) {
+  if (s) lastInput = s;
+  if (diagOn && s) {
+    const pressed = Object.keys(s.buttons || {}).filter((k) => s.buttons[k]).join("+") || "-";
+    const st = s.stick || {}, ir = s.ir || {};
+    const sig = pressed + "|" + (st.x || 0).toFixed(2) + "," + (st.y || 0).toFixed(2) + "|" + (s.ext || "") + "|" + (s.grip || "");
+    if (sig !== lastInputSig) {
+      lastInputSig = sig;
+      diag("input", "buttons=" + pressed + " stick=" + (st.x || 0).toFixed(2) + "," + (st.y || 0).toFixed(2) +
+        " ir=" + (+ir.x || 0).toFixed(2) + "," + (+ir.y || 0).toFixed(2) + " ext=" + (s.ext || "none") + " grip=" + (s.grip || "?"));
+      setTimeout(() => diagProbe("after input"), 60);
+    }
+  }
   const host = window.__host; if (!host || !s) return;
   const pressed = new Set();
   const b = s.buttons || {};
@@ -94,6 +110,80 @@ function applyInput(s) {
   const st = inputStateFromPressed(pressed);
   if (s.stick && (s.stick.x || s.stick.y)) { st.stickX = toByte(s.stick.x); st.stickY = toByte(-s.stick.y); }
   host.setInputState(st);
+  /* Wii Remote (core builds with SetWiimoteState; older cores ignore this). */
+  const a = host.adapter;
+  if (a && typeof a.setWiimoteState === "function") {
+    let bits = 0;
+    for (const k in WII_BITS) if (b[k] === true) bits |= WII_BITS[k];
+    const ir = s.ir || {}, acc = s.accel || {};
+    a.setWiimoteState({
+      buttons: bits,
+      extension: s.ext === "nunchuk" ? 1 : 0,
+      stickX: (s.stick && s.stick.x) || 0,
+      stickY: -((s.stick && s.stick.y) || 0),
+      irX: ir.x === undefined ? 0 : ir.x * 2 - 1,
+      irY: ir.y === undefined ? 0 : 1 - ir.y * 2,
+      irVisible: 1,
+      accelX: +acc.x || 0, accelY: +acc.y || 0, accelZ: acc.z === undefined ? 1 : +acc.z
+    });
+  }
+}
+
+/* ---- diagnostics (AEML, NTUST) ----
+ * Always kept (cheap): boot phases, errors, load/state events.
+ * Only while diagnostic mode is on: every controller change together with
+ * what the emulated Wii Remote reports back (core self-test), plus a
+ * once-per-second performance sample. Ring buffer, exported as text. */
+const DIAG_MAX = 4000;
+const diagLines = [];
+const diagT0 = performance.now();
+let diagOn = false, diagTimer = 0, diagProbeBusy = false, diagProbeAgain = false;
+function diag(kind, text) {
+  const t = ((performance.now() - diagT0) / 1000).toFixed(3).padStart(9);
+  diagLines.push(t + "  " + kind.padEnd(6) + " " + text);
+  if (diagLines.length > DIAG_MAX) diagLines.splice(0, diagLines.length - DIAG_MAX);
+}
+function diagStat() {
+  const h = window.__host;
+  if (!h) return null;
+  return { mode: h.mode, running: !!h.running, coreFps: h.coreFps | 0, gameSpeed: h.gameSpeed | 0,
+    presentFps: h.presentationFps | 0, game: (h.game && (h.game.gameId || h.game.name)) || "" };
+}
+async function diagProbe(label) {
+  if (!diagOn) return;
+  const a = window.__host && window.__host.adapter;
+  if (!a || typeof a.wiimoteSelfTest !== "function") return;
+  if (diagProbeBusy) { diagProbeAgain = true; return; }
+  diagProbeBusy = true;
+  try { diag("wii", label + " -> " + await a.wiimoteSelfTest()); }
+  catch (e) { diag("wii", label + " -> probe failed: " + e); }
+  diagProbeBusy = false;
+  if (diagProbeAgain) { diagProbeAgain = false; diagProbe("(latest)"); }
+}
+function setDiag(on) {
+  diagOn = !!on;
+  clearInterval(diagTimer);
+  diag("diag", diagOn ? "diagnostic mode ON" : "diagnostic mode OFF");
+  if (!diagOn) return;
+  const a = window.__host && window.__host.adapter;
+  diag("diag", "core wiimote hook: " + (a && typeof a.setWiimoteState === "function" ? "yes" : "NO (old core)"));
+  if (window.__host && window.__host.running && window.__host.mode === "dolphin") diagProbe("start");
+  diagTimer = setInterval(() => {
+    const st = diagStat();
+    if (!st) return;
+    diag("perf", "mode=" + st.mode + " running=" + st.running + " coreFps=" + st.coreFps +
+      " speed=" + st.gameSpeed + "% presentFps=" + st.presentFps);
+    post({ cmd: "diagStat", stat: st });
+  }, 1000);
+}
+if (EMBED) {
+  const origErr = console.error, origWarn = console.warn;
+  console.error = function () { try { diag("ERROR", Array.from(arguments).map(String).join(" ").slice(0, 400)); } catch (e) {} return origErr.apply(this, arguments); };
+  console.warn = function () { try { diag("warn", Array.from(arguments).map(String).join(" ").slice(0, 300)); } catch (e) {} return origWarn.apply(this, arguments); };
+  window.addEventListener("error", (e) => diag("ERROR", "uncaught: " + (e.message || e)));
+  window.addEventListener("unhandledrejection", (e) => diag("ERROR", "unhandled promise: " + ((e.reason && e.reason.message) || e.reason)));
+  diag("env", "bridge " + BRIDGE_VER + " | isolated=" + window.crossOriginIsolated + " | " + navigator.userAgent);
+  diag("env", "cpu threads=" + (navigator.hardwareConcurrency || "?") + " memory=" + (navigator.deviceMemory || "?") + "GB webgpu=" + !!navigator.gpu);
 }
 
 /* ---- loading progress (drives the light bar on the Blogger page) ----
@@ -120,6 +210,7 @@ if (EMBED) {
     try {
       const t = String(arguments[0] || "");
       if (t.indexOf("[boot-phase]") === 0) {
+        diag("boot", t.slice(13, 200));
         if (t.indexOf("mountGame() entry") >= 0) progress("core", 8);
         else if (t.indexOf("new Worker(discio)") >= 0) { progress("core", 12); creep("core", 68); }
         else if (t.indexOf("after this.load()") >= 0) { progress("mount", 72); creep("mount", 88); }
@@ -167,6 +258,7 @@ function showPicker() {
   wrap.append(b, note, inp); document.body.appendChild(wrap);
 }
 function startLoad(file, copied) {
+  diag("game", "load start: " + file.name + " (" + (file.size / 1048576).toFixed(1) + " MB)" + (copied ? " [copied from page]" : " [picked in frame]"));
   if (!copied) { span = [0, 100]; curPct = 0; }
   post({ cmd: "picked", name: file.name, size: file.size });
   loadGame(file).catch((err) => post({ cmd: "error", message: String((err && err.message) || err) }));
@@ -191,6 +283,10 @@ async function loadGame(file) {
     .catch(() => { stopCreep(); throw new Error("the core could not boot this disc"); });
   stopCreep(); progress("done", 100);
   post({ cmd: "loaded", title: host.game.name || file.name, gameId: host.game.gameId || "" });
+  diag("game", "loaded id=" + (host.game.gameId || "?") + " platform=" + (host.game.platform || "?") +
+    " title=" + (host.game.name || file.name) + " size=" + file.size);
+  /* give the new game the current controller state (Nunchuk, pointer, tilt) */
+  applyInput(lastInput || { buttons: {}, stick: { x: 0, y: 0 }, ir: { x: 0.5, y: 0.5 }, accel: { x: 0, y: 0, z: 1 }, ext: "none" });
   setTimeout(() => {
     const mute = document.getElementById("muteButton");
     if (mute && /^muted$/i.test(mute.getAttribute("aria-label") || "")) askGesture();
@@ -224,7 +320,7 @@ if (EMBED) {
       return;
     }
     parentOrigin = e.origin;
-    const fail = (err) => post({ cmd: "error", id: d.id, message: String((err && err.message) || err) });
+    const fail = (err) => { diag("ERROR", (d.cmd || "?") + ": " + String((err && err.message) || err)); post({ cmd: "error", id: d.id, message: String((err && err.message) || err) }); };
     switch (d.cmd) {
       case "hello": announce(); break;
       case "input": applyInput(d.state); break;
@@ -233,8 +329,13 @@ if (EMBED) {
         post({ cmd: "ack", size: d.file && d.file.size });
         if (d.file instanceof Blob) adoptParentFile(d.file).catch(fail); else fail("no file");
         break;
-      case "saveState": saveState(d.id).catch(fail); break;
-      case "loadState": loadState(d.id, d.data).catch(fail); break;
+      case "diag": setDiag(d.on); break;
+      case "diagExport":
+        diag("diag", "export requested; stat=" + JSON.stringify(diagStat()));
+        post({ cmd: "diagLog", id: d.id, text: diagLines.join("\n") });
+        break;
+      case "saveState": diag("state", "save requested"); saveState(d.id).catch(fail); break;
+      case "loadState": diag("state", "load requested"); loadState(d.id, d.data).catch(fail); break;
     }
   });
 

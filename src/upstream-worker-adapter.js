@@ -513,6 +513,39 @@ export class UpstreamWorkerAdapter {
     this.post("setInputMask", { mask: mask >>> 0 });
   }
 
+  // AEML, NTUST: report what the emulated Wii Remote would send right now.
+  async wiimoteSelfTest() {
+    if (!this.loaded) return "not-loaded";
+    const r = await this.request("aemlWiimoteSelfTest", {});
+    return r && r.result;
+  }
+
+  // AEML, NTUST: browser Wii Remote state (see SetWiimoteState in the core).
+  setWiimoteState(state) {
+    if (!this.loaded || !state) {
+      return;
+    }
+    const n = (v, lo, hi) => (Number.isFinite(+v) ? Math.max(lo, Math.min(hi, +v)) : 0);
+    const next = {
+      buttons: (state.buttons >>> 0) & 0x3fff,
+      extension: state.extension === 1 ? 1 : 0,
+      stickX: n(state.stickX, -1, 1),
+      stickY: n(state.stickY, -1, 1),
+      irX: n(state.irX, -1, 1),
+      irY: n(state.irY, -1, 1),
+      irVisible: state.irVisible ? 1 : 0,
+      accelX: n(state.accelX, -8, 8),
+      accelY: n(state.accelY, -8, 8),
+      accelZ: state.accelZ === undefined ? 1 : n(state.accelZ, -8, 8)
+    };
+    const signature = JSON.stringify(next);
+    if (signature === this.lastWiimoteSignature) {
+      return;
+    }
+    this.lastWiimoteSignature = signature;
+    this.post("setWiimoteState", next);
+  }
+
   setInputState(state) {
     if (!this.loaded || !state) {
       return;
