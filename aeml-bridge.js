@@ -22,7 +22,7 @@ const ALLOWED_PARENTS = [
 const params = new URLSearchParams(location.search);
 const EMBED = params.get("embed") === "aeml" && window.parent !== window;
 const SIG = "AEML, NTUST";
-const BRIDGE_VER = "1.6";
+const BRIDGE_VER = "1.7";
 let parentOrigin = null;
 
 function allowed(origin) { return ALLOWED_PARENTS.some((re) => re.test(origin)); }
@@ -124,7 +124,9 @@ function applyInput(s) {
       irX: ir.x === undefined ? 0 : ir.x * 2 - 1,
       irY: ir.y === undefined ? 0 : 1 - ir.y * 2,
       irVisible: 1,
-      accelX: +acc.x || 0, accelY: +acc.y || 0, accelZ: acc.z === undefined ? 1 : +acc.z
+      accelX: +acc.x || 0, accelY: +acc.y || 0, accelZ: acc.z === undefined ? 1 : +acc.z,
+      gyroX: (s.gyro && +s.gyro.x) || 0, gyroY: (s.gyro && +s.gyro.y) || 0, gyroZ: (s.gyro && +s.gyro.z) || 0,
+      motionPlus: !!s.motionPlus
     });
   }
 }

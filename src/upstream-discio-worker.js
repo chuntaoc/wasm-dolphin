@@ -2389,7 +2389,7 @@ function bindApi(module) {
             ccall(
               "SetWiimoteState",
               null,
-              ["number", "number", "number", "number", "number", "number", "number", "number", "number", "number"],
+              ["number", "number", "number", "number", "number", "number", "number", "number", "number", "number", "number", "number", "number", "number"],
               [
                 s.buttons >>> 0,
                 s.extension | 0,
@@ -2400,7 +2400,11 @@ function bindApi(module) {
                 s.irVisible ? 1 : 0,
                 +s.accelX || 0,
                 +s.accelY || 0,
-                s.accelZ === undefined ? 1 : +s.accelZ || 0
+                s.accelZ === undefined ? 1 : +s.accelZ || 0,
+                +s.gyroX || 0,
+                +s.gyroY || 0,
+                +s.gyroZ || 0,
+                s.motionPlus ? 1 : 0
               ]
             )
         : null,

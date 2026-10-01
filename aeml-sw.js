@@ -9,6 +9,8 @@ self.addEventListener('fetch', function (e) {
   var req = e.request;
   if (req.cache === 'only-if-cached' && req.mode !== 'same-origin') return;
   if (new URL(req.url).origin !== self.location.origin) return;
+  /* the phone controller page needs no isolation; leave it untouched */
+  if (/\/pad\.html$/.test(new URL(req.url).pathname)) return;
   e.respondWith(fetch(req).then(function (res) {
     if (!res || res.status === 0 || res.type === 'opaqueredirect') return res;
     var h = new Headers(res.headers);

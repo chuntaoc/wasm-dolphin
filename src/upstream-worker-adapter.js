@@ -536,7 +536,11 @@ export class UpstreamWorkerAdapter {
       irVisible: state.irVisible ? 1 : 0,
       accelX: n(state.accelX, -8, 8),
       accelY: n(state.accelY, -8, 8),
-      accelZ: state.accelZ === undefined ? 1 : n(state.accelZ, -8, 8)
+      accelZ: state.accelZ === undefined ? 1 : n(state.accelZ, -8, 8),
+      gyroX: n(state.gyroX, -35, 35),
+      gyroY: n(state.gyroY, -35, 35),
+      gyroZ: n(state.gyroZ, -35, 35),
+      motionPlus: state.motionPlus ? 1 : 0
     };
     const signature = JSON.stringify(next);
     if (signature === this.lastWiimoteSignature) {

@@ -855,9 +855,11 @@ struct DolphinWebWiimoteState
   float ir_x, ir_y;
   std::int32_t ir_visible;
   float accel_x, accel_y, accel_z;
+  float gyro_x, gyro_y, gyro_z;
+  std::int32_t flags;
 };
 static std::mutex s_wiimote_mutex;
-static DolphinWebWiimoteState s_wiimote{0, 0, 0.f, 0.f, 0.f, 0.f, 1, 0.f, 0.f, 1.f};
+static DolphinWebWiimoteState s_wiimote{0, 0, 0.f, 0.f, 0.f, 0.f, 1, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0};
 static bool s_wiimote_active = false;
 
 static float ClampUnit(float v, float lo, float hi)
@@ -870,7 +872,7 @@ EMSCRIPTEN_KEEPALIVE
 #endif
 void SetWiimoteState(std::uint32_t buttons, int extension, float stick_x, float stick_y,
                      float ir_x, float ir_y, int ir_visible, float accel_x, float accel_y,
-                     float accel_z)
+                     float accel_z, float gyro_x, float gyro_y, float gyro_z, int flags)
 {
   DolphinWebWiimoteState next;
   next.buttons = buttons & 0x3fffu;
@@ -883,6 +885,11 @@ void SetWiimoteState(std::uint32_t buttons, int extension, float stick_x, float 
   next.accel_x = ClampUnit(accel_x, -8.f, 8.f);
   next.accel_y = ClampUnit(accel_y, -8.f, 8.f);
   next.accel_z = ClampUnit(accel_z, -8.f, 8.f);
+  // MotionPlus reads up to ~35 rad/s (2000 deg/s) in fast mode.
+  next.gyro_x = ClampUnit(gyro_x, -35.f, 35.f);
+  next.gyro_y = ClampUnit(gyro_y, -35.f, 35.f);
+  next.gyro_z = ClampUnit(gyro_z, -35.f, 35.f);
+  next.flags = flags & 1;
   const std::lock_guard<std::mutex> lock(s_wiimote_mutex);
   s_wiimote = next;
   s_wiimote_active = true;

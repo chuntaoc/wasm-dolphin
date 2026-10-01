@@ -836,11 +836,17 @@ static std::string AemlDescribeWiimote()
   wiimote->PrepareInput(&state, WiimoteCommon::HIDWiimote::SensorBarState::Enabled);
   const auto& cam = state.camera_points[0].position;
   const auto& acc = state.acceleration.value;
+  std::string mp = "off";
+  if (state.motion_plus)
+  {
+    const auto& g = state.motion_plus->gyro.value;
+    mp = std::to_string(g.x) + "," + std::to_string(g.y) + "," + std::to_string(g.z);
+  }
   return "buttons=" + std::to_string(state.buttons.hex) +
          " ext=" + std::to_string(state.extension.data.index()) +
          " cam0=" + std::to_string(cam.x) + "," + std::to_string(cam.y) +
          " accel=" + std::to_string(acc.x) + "," + std::to_string(acc.y) + "," +
-         std::to_string(acc.z);
+         std::to_string(acc.z) + " mplus=" + mp;
 }
 
 extern "C"

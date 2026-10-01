@@ -12,7 +12,7 @@ index 1bde8d4e7b..d17b6a27c9 100644
      # elimination. -lworkerfs.js / -lnodefs.js above only make the JS
      # libraries available to the link; current Emscripten still drops a JS
 diff --git a/Source/Core/Core/HW/WiimoteEmu/WiimoteEmu.cpp b/Source/Core/Core/HW/WiimoteEmu/WiimoteEmu.cpp
-index 7fc81f6321..4617cf871c 100644
+index 7fc81f6321..11a3636ff9 100644
 --- a/Source/Core/Core/HW/WiimoteEmu/WiimoteEmu.cpp
 +++ b/Source/Core/Core/HW/WiimoteEmu/WiimoteEmu.cpp
 @@ -3,6 +3,11 @@
@@ -35,7 +35,7 @@ index 7fc81f6321..4617cf871c 100644
  #include "Core/Core.h"
  #include "Core/HW/Wiimote.h"
  
-@@ -476,9 +482,121 @@ GetPassthroughCameraPoints(ControllerEmu::IRPassthrough* ir_passthrough)
+@@ -476,9 +482,123 @@ GetPassthroughCameraPoints(ControllerEmu::IRPassthrough* ir_passthrough)
    return camera_points;
  }
  
@@ -53,7 +53,9 @@ index 7fc81f6321..4617cf871c 100644
 +  float stick_x, stick_y;  // -1..1, +y = up
 +  float ir_x, ir_y;        // -1..1, +y = up
 +  std::int32_t ir_visible;
-+  float accel_x, accel_y, accel_z;  // in g, Wii Remote axes
++  float accel_x, accel_y, accel_z;  // in g, Wii Remote axes (+x left, +y toward player, +z up)
++  float gyro_x, gyro_y, gyro_z;     // rad/s, same axes (MotionPlus)
++  std::int32_t flags;               // bit 0: MotionPlus attached
 +};
 +extern "C" int DolphinWeb_GetWiimoteState(int index, DolphinWebWiimoteState* out);
 +
@@ -157,7 +159,7 @@ index 7fc81f6321..4617cf871c 100644
    // Hotkey / settings modifier
    // Data is later accessed in IsSideways and IsUpright
    m_hotkeys->UpdateState();
-@@ -516,6 +634,32 @@ void Wiimote::BuildDesiredWiimoteState(DesiredWiimoteState* target_state,
+@@ -516,12 +636,50 @@ void Wiimote::BuildDesiredWiimoteState(DesiredWiimoteState* target_state,
      target_state->camera_points = DesiredWiimoteState::DEFAULT_CAMERA;
    }
  
@@ -190,3 +192,21 @@ index 7fc81f6321..4617cf871c 100644
    // Calculate MotionPlus state.
    if (m_motion_plus_setting.GetValue())
      target_state->motion_plus = MotionPlus::GetGyroscopeData(GetTotalAngularVelocity());
+   else
+     target_state->motion_plus = std::nullopt;
+ 
++#ifdef __EMSCRIPTEN__
++  // Browser MotionPlus: the phone's gyroscope, already in Wii Remote axes.
++  if (web_active)
++  {
++    if (web.flags & 1)
++      target_state->motion_plus =
++          MotionPlus::GetGyroscopeData(Common::Vec3(web.gyro_x, web.gyro_y, web.gyro_z));
++    else
++      target_state->motion_plus = std::nullopt;
++  }
++#endif
++
+   // Build Extension state.
+   // This also allows the extension to perform any regular duties it may need.
+   // (e.g. Nunchuk motion simulation step)
