@@ -7,7 +7,7 @@
  * ===================================================================== */
 const ROOM_RE = /^[A-Z0-9]{6}$/;
 const MAX_MSG = 4096;          // bytes; controller packets are ~300
-const MAX_PADS = 8;
+const MAX_PADS = 4;
 
 function originAllowed(origin, list) {
   if (!origin) return false;
