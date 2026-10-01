@@ -1,0 +1,335 @@
+<!doctype html>
+<!-- =====================================================================
+     AEML Wii phone controller  v1.0  —  (c) AEML, NTUST
+     Opened on the phone from the QR code on the emulator page.
+     Sends buttons, aim (orientation), accelerometer and gyroscope
+     (MotionPlus) to the emulator page over a WebRTC data channel.
+     SPDX-License-Identifier: GPL-2.0-or-later
+     ===================================================================== -->
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0f1720">
+<meta name="author" content="AEML, NTUST">
+<title>Wii 手機搖桿 · AEML, NTUST</title>
+<style>
+:root{--bg:#0f1720;--panel:#18222e;--line:#3a4f66;--txt:#e6edf3;--mut:#8aa0b4;--acc:#22c3ee;--acc2:#f59e0b;--ok:#34d399;--bad:#f87171}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);font:15px system-ui,-apple-system,"Noto Sans TC","Microsoft JhengHei",sans-serif;overflow:hidden;
+  touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+body.en .zh{display:none!important} body:not(.en) .en{display:none!important}
+[hidden]{display:none!important}
+#top{position:fixed;left:0;right:0;top:0;display:flex;align-items:center;gap:8px;padding:calc(6px + env(safe-area-inset-top)) 10px 6px;background:#0b1118;border-bottom:1px solid #1f2b38;z-index:5;font-size:13px}
+#dot{width:10px;height:10px;border-radius:50%;background:var(--bad);flex:none}
+#dot.ok{background:var(--ok)} #dot.wait{background:var(--acc2)}
+#st{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#top button,.pill{font:inherit;color:var(--txt);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:4px 8px}
+#wm{position:fixed;right:8px;bottom:calc(4px + env(safe-area-inset-bottom));font-size:10px;color:rgba(255,255,255,.3);pointer-events:none;z-index:6}
+#banner{position:fixed;left:10px;right:10px;top:calc(46px + env(safe-area-inset-top));padding:10px 12px;border-radius:10px;background:var(--acc2);color:#1a1000;font-weight:700;z-index:6;text-align:center}
+/* start / settings sheets */
+.sheet{position:fixed;inset:0;z-index:10;background:rgba(5,8,12,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center}
+.sheet h1{font-size:22px;margin:0}
+.sheet p{color:var(--mut);margin:0;max-width:420px;line-height:1.5}
+.big{font:700 20px system-ui,sans-serif;padding:16px 28px;border-radius:14px;border:2px solid var(--acc);background:#0b1118;color:var(--txt)}
+.sheet label{display:flex;align-items:center;gap:8px;font-size:16px}
+.sheet select{font:inherit;padding:8px;border-radius:8px;background:var(--panel);color:var(--txt);border:1px solid var(--line)}
+/* controller */
+#pad{position:fixed;left:0;right:0;bottom:0;top:calc(40px + env(safe-area-inset-top));padding:8px 10px calc(18px + env(safe-area-inset-bottom))}
+.b{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:50%;background:#243345;border:2px solid var(--line);color:var(--txt);font-weight:800;font-size:22px;touch-action:none}
+.b small{font-size:11px;font-weight:400;color:var(--mut)}
+.b.on{background:var(--acc);border-color:var(--acc);color:#021016}
+.b.on small{color:#021016}
+.b.sq{border-radius:12px}
+.stick{position:absolute;border-radius:50%;background:radial-gradient(#243345,#141d28);border:2px solid var(--line);touch-action:none}
+.knob{position:absolute;left:50%;top:50%;width:40%;height:40%;transform:translate(-50%,-50%);border-radius:50%;background:var(--acc2)}
+</style>
+</head>
+<body>
+<div id="top">
+ <span id="dot"></span><span id="st"></span>
+ <button id="bRecenter" type="button"><span class="zh">置中</span><span class="en">Center</span></button>
+ <button id="bCalib" type="button"><span class="zh">校正</span><span class="en">Calibrate</span></button>
+ <button id="bSet" type="button">⚙</button>
+</div>
+<div id="banner" hidden></div>
+<div id="pad"></div>
+<div id="wm">AEML, NTUST</div>
+
+<!-- start sheet: one tap to unlock sensors, fullscreen and wake lock -->
+<div class="sheet" id="start">
+ <h1><span class="zh">Wii 手機搖桿</span><span class="en">Wii phone controller</span></h1>
+ <p><span class="zh">像拿 Wii 遙控器一樣握住手機：螢幕朝上、手機頂端對準電腦畫面。</span><span class="en">Hold the phone like a Wii Remote: screen up, top edge pointing at the computer screen.</span></p>
+ <button class="big" id="go" type="button"><span class="zh">開始</span><span class="en">Start</span></button>
+ <p id="startMsg"></p>
+ <p style="font-size:12px">AEML, NTUST</p>
+</div>
+
+<!-- settings sheet -->
+<div class="sheet" id="settings" hidden>
+ <h1><span class="zh">設定</span><span class="en">Settings</span></h1>
+ <label><span class="zh">握法</span><span class="en">Grip</span>
+  <select id="sGrip">
+   <option value="auto">自動（直拿＝直握，橫拿＝橫握）/ Auto</option>
+   <option value="upright">直握 / Upright</option>
+   <option value="sideways">橫握 / Sideways</option>
+   <option value="nunchuk">直握＋雙節棍 / With Nunchuk</option>
+  </select></label>
+ <label><input type="checkbox" id="sMp" checked> <span class="zh">MotionPlus（陀螺儀）</span><span class="en">MotionPlus (gyroscope)</span></label>
+ <label><input type="checkbox" id="sTilt" checked> <span class="zh">體感傾斜／揮動</span><span class="en">Tilt and swing</span></label>
+ <label><input type="checkbox" id="sVib" checked> <span class="zh">按鍵震動</span><span class="en">Vibrate on press</span></label>
+ <button class="big" id="sDone" type="button"><span class="zh">完成</span><span class="en">Done</span></button>
+</div>
+
+<!-- status texts (switched by JS) -->
+<div id="msgs" hidden>
+ <span data-m="connecting"><span class="zh">連線中…</span><span class="en">Connecting…</span></span>
+ <span data-m="connected"><span class="zh">已連線</span><span class="en">Connected</span></span>
+ <span data-m="relay"><span class="zh">已連線（經中繼伺服器）</span><span class="en">Connected (via relay)</span></span>
+ <span data-m="lost"><span class="zh">連線中斷，重新連線中…</span><span class="en">Connection lost, reconnecting…</span></span>
+ <span data-m="nocode"><span class="zh">網址缺少配對碼，請重新掃描電腦畫面上的 QR code。</span><span class="en">No pairing code. Scan the QR code on the computer again.</span></span>
+ <span data-m="nosensor"><span class="zh">感測器未啟用（只能用按鍵）</span><span class="en">Sensors off (buttons only)</span></span>
+ <span data-m="calib"><span class="zh">校正：把手機頂端對準電腦畫面上閃爍的點，按 A</span><span class="en">Calibration: point the top of the phone at the flashing dot, press A</span></span>
+ <span data-m="centered"><span class="zh">已置中</span><span class="en">Centered</span></span>
+</div>
+
+<script src="./peerjs.min.js"></script>
+<script>
+/* AEML Wii phone controller -- (c) AEML, NTUST */
+(function () {
+  'use strict';
+  var SIG = 'AEML, NTUST';
+  var q = new URLSearchParams(location.search);
+  var code = (q.get('c') || '').toUpperCase();
+  if (q.get('lang') === 'en') document.body.classList.add('en');
+  var $ = function (s) { return document.querySelector(s); };
+  function ls(k, v) { try { if (v === undefined) return localStorage.getItem('aemlpad-' + k); localStorage.setItem('aemlpad-' + k, v); } catch (e) { return null; } }
+  function st(key, cls, extra) {
+    var t = document.querySelector('#msgs [data-m="' + key + '"]');
+    $('#st').textContent = ''; if (t) $('#st').appendChild(t.cloneNode(true));
+    if (extra) $('#st').appendChild(document.createTextNode(' ' + extra));
+    $('#dot').className = cls || '';
+  }
+
+  /* ---------- settings ---------- */
+  var cfg = { grip: ls('grip') || 'auto', mp: ls('mp') !== '0', tilt: ls('tilt') !== '0', vib: ls('vib') !== '0' };
+  $('#sGrip').value = cfg.grip; $('#sMp').checked = cfg.mp; $('#sTilt').checked = cfg.tilt; $('#sVib').checked = cfg.vib;
+  $('#bSet').onclick = function () { $('#settings').hidden = false; };
+  $('#sDone').onclick = function () {
+    cfg.grip = $('#sGrip').value; cfg.mp = $('#sMp').checked; cfg.tilt = $('#sTilt').checked; cfg.vib = $('#sVib').checked;
+    ls('grip', cfg.grip); ls('mp', cfg.mp ? '1' : '0'); ls('tilt', cfg.tilt ? '1' : '0'); ls('vib', cfg.vib ? '1' : '0');
+    $('#settings').hidden = true; layout(); dirty = true;
+  };
+
+  /* ---------- controller layouts (percent of the pad area) ---------- */
+  var btn = {}, stickXY = { x: 0, y: 0 }, recenterCount = 0, calibStep = -1;
+  function grip() {
+    if (cfg.grip !== 'auto') return cfg.grip;
+    return (window.innerWidth > window.innerHeight) ? 'sideways' : 'upright';
+  }
+  var LAYOUTS = {
+    upright: [ // portrait, like a Wii Remote
+      ['UP', 50, 9, 16, '▲', 1], ['LEFT', 31, 20, 16, '◀', 1], ['RIGHT', 69, 20, 16, '▶', 1], ['DOWN', 50, 31, 16, '▼', 1],
+      ['A', 50, 50, 30, 'A'], ['B', 86, 50, 20, 'B', 0, 'trig'],
+      ['MINUS', 25, 68, 14, '−'], ['HOME', 50, 68, 14, '⌂'], ['PLUS', 75, 68, 14, '+'],
+      ['ONE', 50, 80, 17, '1'], ['TWO', 50, 93, 17, '2'], ['SHAKE', 14, 50, 18, '〰', 0, 'shake']
+    ],
+    sideways: [ // landscape, D-pad on the left
+      ['UP', 16, 26, 17, '▲', 1], ['LEFT', 6, 50, 17, '◀', 1], ['RIGHT', 26, 50, 17, '▶', 1], ['DOWN', 16, 74, 17, '▼', 1],
+      ['ONE', 72, 62, 22, '1'], ['TWO', 90, 50, 22, '2'],
+      ['A', 50, 22, 13, 'A'], ['B', 68, 22, 13, 'B'],
+      ['MINUS', 40, 58, 10, '−'], ['HOME', 50, 58, 10, '⌂'], ['PLUS', 60, 58, 10, '+'], ['SHAKE', 50, 86, 12, '〰']
+    ],
+    nunchuk: [ // portrait: Nunchuk stick and C/Z on the left, remote on the right
+      ['C', 14, 14, 15, 'C'], ['Z', 36, 14, 15, 'Z'],
+      ['UP', 75, 8, 14, '▲', 1], ['LEFT', 62, 18, 14, '◀', 1], ['RIGHT', 88, 18, 14, '▶', 1], ['DOWN', 75, 28, 14, '▼', 1],
+      ['A', 75, 46, 24, 'A'], ['B', 75, 64, 18, 'B'],
+      ['MINUS', 62, 79, 11, '−'], ['HOME', 75, 79, 11, '⌂'], ['PLUS', 88, 79, 11, '+'],
+      ['ONE', 66, 93, 13, '1'], ['TWO', 84, 93, 13, '2'], ['SHAKE', 25, 93, 14, '〰']
+    ]
+  };
+  function vib() { if (cfg.vib && navigator.vibrate) try { navigator.vibrate(10); } catch (e) {} }
+  function layout() {
+    var pad = $('#pad'); pad.textContent = ''; btn = {};
+    var g = grip(), L = LAYOUTS[g];
+    var W = pad.clientWidth, H = pad.clientHeight, unit = Math.min(W, H) / 100;
+    L.forEach(function (d) {
+      var el = document.createElement('div');
+      el.className = 'b' + (d[5] ? ' sq' : '');
+      var size = d[3] * unit * (g === 'sideways' ? 1.15 : 1.25);
+      el.style.width = el.style.height = size + 'px';
+      el.style.left = (d[1] / 100 * W - size / 2) + 'px';
+      el.style.top = (d[2] / 100 * H - size / 2) + 'px';
+      el.textContent = d[4];
+      if (d[6] === 'trig') { el.style.borderRadius = '14px'; el.style.height = size * 2 + 'px'; el.style.top = (d[2] / 100 * H - size) + 'px'; }
+      pad.appendChild(el);
+      var k = d[0];
+      function set(on) { if (!!btn[k] === on) return; btn[k] = on; el.classList.toggle('on', on); if (on) vib(); dirty = true; if (on && k === 'A') onA(); }
+      el.addEventListener('pointerdown', function (e) { e.preventDefault(); try { el.setPointerCapture(e.pointerId); } catch (x) {} set(true); });
+      ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (ev) { el.addEventListener(ev, function () { set(false); }); });
+    });
+    if (g === 'nunchuk') addStick(pad, 25 / 100 * W, 50 / 100 * H, Math.min(W * 0.46, H * 0.42));
+  }
+  function addStick(pad, cx, cy, size) {
+    var s = document.createElement('div'); s.className = 'stick';
+    s.style.width = s.style.height = size + 'px'; s.style.left = (cx - size / 2) + 'px'; s.style.top = (cy - size / 2) + 'px';
+    var k = document.createElement('div'); k.className = 'knob'; s.appendChild(k); pad.appendChild(s);
+    var id = null;
+    function mv(e) {
+      var r = s.getBoundingClientRect(), R = r.width / 2;
+      var dx = (e.clientX - r.left - R) / R, dy = (e.clientY - r.top - R) / R, m = Math.hypot(dx, dy);
+      if (m > 1) { dx /= m; dy /= m; }
+      k.style.transform = 'translate(calc(-50% + ' + dx * R * 0.6 + 'px), calc(-50% + ' + dy * R * 0.6 + 'px))';
+      stickXY = { x: dx, y: dy }; dirty = true;
+    }
+    s.addEventListener('pointerdown', function (e) { e.preventDefault(); id = e.pointerId; s.setPointerCapture(id); mv(e); });
+    s.addEventListener('pointermove', function (e) { if (e.pointerId === id) mv(e); });
+    function end() { id = null; k.style.transform = 'translate(-50%,-50%)'; stickXY = { x: 0, y: 0 }; dirty = true; }
+    s.addEventListener('pointerup', end); s.addEventListener('pointercancel', end);
+  }
+  window.addEventListener('resize', function () { setTimeout(layout, 50); dirty = true; });
+
+  /* ---------- sensors ----------
+   * Wii Remote frame (Dolphin): +x left, +y toward the player, +z up (button face).
+   * Phone held like a remote (top edge = IR end, screen = buttons) is that frame
+   * turned 180 degrees about z:  wii = (-phone.x, -phone.y, +phone.z). */
+  var IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var acc = { x: 0, y: 0, z: 1 }, gyro = { x: 0, y: 0, z: 0 }, ori = null, sensorsOn = false;
+  function onMotion(e) {
+    var a = e.accelerationIncludingGravity, r = e.rotationRate;
+    if (a && a.x !== null) {
+      var s = IOS ? -1 : 1;                      /* iOS reports the opposite sign */
+      acc = { x: -s * a.x / 9.81, y: -s * a.y / 9.81, z: s * a.z / 9.81 };
+    }
+    if (r && r.alpha !== null) {
+      var d = Math.PI / 180;                     /* deg/s -> rad/s */
+      gyro = { x: -(r.beta || 0) * d, y: -(r.gamma || 0) * d, z: (r.alpha || 0) * d };
+    }
+    sensorsOn = true; dirty = true;
+  }
+  function onOrient(e) {
+    if (e.alpha === null) return;
+    ori = { yaw: e.alpha, pitch: e.beta };      /* heading of the top edge, and its elevation */
+    dirty = true;
+  }
+  function startSensors() {
+    function go() { window.addEventListener('devicemotion', onMotion); window.addEventListener('deviceorientation', onOrient); }
+    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+      return DeviceMotionEvent.requestPermission().then(function (p) {
+        if (p !== 'granted') throw new Error('denied');
+        return (DeviceOrientationEvent.requestPermission ? DeviceOrientationEvent.requestPermission() : 'granted');
+      }).then(go);
+    }
+    go(); return Promise.resolve();
+  }
+
+  /* ---------- link ---------- */
+  var ICE = [
+    { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
+    { urls: 'stun:stun.cloudflare.com:3478' },
+    { urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp'],
+      username: 'openrelayproject', credential: 'openrelayproject' }
+  ];
+  function peerOpts() {
+    var o = { config: { iceServers: ICE } };
+    var ps = q.get('ps'); /* optional own signalling server: host:port:path:secure */
+    if (ps) { var p = ps.split(':'); o.host = p[0]; o.port = +p[1]; o.path = p[2] || '/'; o.secure = p[3] === '1'; }
+    return o;
+  }
+  var peer = null, conn = null, seq = 0, lastHeard = 0, retryTimer = 0, linkOk = false;
+  function connect() {
+    clearTimeout(retryTimer);
+    if (!/^[A-Z0-9]{6}$/.test(code)) { st('nocode', ''); return; }
+    st('connecting', 'wait', code);
+    try { if (peer) peer.destroy(); } catch (e) {}
+    peer = new Peer(peerOpts());
+    peer.on('open', function () {
+      conn = peer.connect('aemlwii-' + code, { reliable: false, serialization: 'json' });
+      conn.on('open', function () {
+        linkOk = true; lastHeard = Date.now(); dirty = true; send(true);
+        reportRoute();
+      });
+      conn.on('data', onData);
+      conn.on('close', lost);
+      conn.on('error', lost);
+    });
+    peer.on('error', function (e) { st('lost', 'wait', e && e.type ? '(' + e.type + ')' : ''); retry(); });
+    peer.on('disconnected', function () { try { peer.reconnect(); } catch (e) { retry(); } });
+  }
+  function lost() { if (!linkOk) return; linkOk = false; st('lost', 'wait'); retry(); }
+  function retry() { clearTimeout(retryTimer); retryTimer = setTimeout(connect, 2000); }
+  function reportRoute() {
+    /* tell the user whether this is a direct or relayed connection */
+    var pc = conn && conn.peerConnection;
+    if (!pc || !pc.getStats) { st('connected', 'ok'); return; }
+    pc.getStats().then(function (rep) {
+      var relay = false;
+      rep.forEach(function (r) {
+        if (r.type === 'candidate-pair' && r.state === 'succeeded' && r.nominated) {
+          var l = rep.get(r.localCandidateId);
+          if (l && l.candidateType === 'relay') relay = true;
+        }
+      });
+      st(relay ? 'relay' : 'connected', 'ok');
+    }).catch(function () { st('connected', 'ok'); });
+  }
+  function onData(d) {
+    lastHeard = Date.now();
+    if (!d || d.sig !== SIG) return;
+    if (d.t === 'calib') {
+      calibStep = d.step;
+      var b = $('#banner');
+      if (d.step >= 0) {
+        b.textContent = ''; b.appendChild(document.querySelector('#msgs [data-m="calib"]').cloneNode(true));
+        b.appendChild(document.createTextNode('  (' + (d.step + 1) + '/' + d.total + ')')); b.hidden = false;
+      } else { b.hidden = true; }
+    }
+    if (d.t === 'rumble' && cfg.vib && navigator.vibrate) { try { navigator.vibrate(d.on ? 200 : 0); } catch (e) {} }
+  }
+  function onA() { /* during calibration the page reads the A press itself */ }
+  $('#bRecenter').onclick = function () {
+    recenterCount++; dirty = true; vib();
+    var b = $('#banner'); b.textContent = ''; b.appendChild(document.querySelector('#msgs [data-m="centered"]').cloneNode(true));
+    b.hidden = false; setTimeout(function () { if (calibStep < 0) b.hidden = true; }, 900);
+  };
+  $('#bCalib').onclick = function () { if (conn && conn.open) conn.send({ t: 'calibStart', sig: SIG }); vib(); };
+
+  /* ---------- send loop: every frame while sensors run, else on change + keep-alive ---------- */
+  var dirty = true, lastSend = 0;
+  function packet() {
+    var g = grip(), b = {};
+    for (var k in btn) if (btn[k]) b[k] = true;
+    return {
+      t: 'pad', v: 2, sig: SIG, seq: ++seq, b: b, x: stickXY.x, y: stickXY.y,
+      p: g, rc: recenterCount,
+      ori: ori, acc: cfg.tilt ? acc : null, gyro: (cfg.mp && sensorsOn) ? gyro : null, mp: cfg.mp && sensorsOn
+    };
+  }
+  function send(force) {
+    if (!conn || !conn.open) return;
+    try { conn.send(packet()); lastSend = Date.now(); dirty = false; } catch (e) {}
+  }
+  (function loop() {
+    var now = Date.now();
+    if (conn && conn.open && (dirty || now - lastSend > 250)) send();
+    requestAnimationFrame(loop);
+  })();
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && (!conn || !conn.open)) connect(); });
+
+  /* ---------- start ---------- */
+  var wakeLock = null;
+  $('#go').onclick = function () {
+    var el = document.documentElement;
+    try { (el.requestFullscreen || el.webkitRequestFullscreen || function () {}).call(el); } catch (e) {}
+    try { if (navigator.wakeLock) navigator.wakeLock.request('screen').then(function (w) { wakeLock = w; }); } catch (e) {}
+    startSensors().then(function () { $('#start').hidden = true; layout(); }, function () {
+      $('#start').hidden = true; layout(); if (!linkOk) return; st('nosensor', 'ok');
+    });
+  };
+  layout();
+  connect();
+  console.log('%cAEML, NTUST - Wii phone controller', 'color:#22c3ee;font-weight:bold');
+})();
+</script>
+</body>
+</html>
