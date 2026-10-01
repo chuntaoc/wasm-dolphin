@@ -455,6 +455,7 @@ export class UpstreamWorkerAdapter {
     this.loaded = true;
     this.lastWiimoteSignatures = [];
     this.wiimoteConnected = [];
+    this.speakerMask = -1;
   }
 
   async mountGame(file) {
@@ -557,6 +558,16 @@ export class UpstreamWorkerAdapter {
     }
     this.lastWiimoteSignatures[slot] = signature;
     this.post("setWiimoteState", next);
+  }
+
+  // AEML, NTUST: rumble bits and phone-speaker audio. mask: remotes whose phone plays the speaker.
+  async wiimoteOutputs(mask) {
+    if (!this.loaded) return null;
+    if ((mask | 0) !== this.speakerMask) {
+      this.speakerMask = mask | 0;
+      this.post("aemlSpeakerToPhone", { mask: this.speakerMask });
+    }
+    return this.request("aemlOutputs", { mask: mask | 0 });
   }
 
   // AEML, NTUST: connect (true) or disconnect (false) Wii Remote 2-4 (slot 1-3).

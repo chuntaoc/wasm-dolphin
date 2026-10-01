@@ -630,6 +630,8 @@ void EnsureRuntime()
   Config::SetBase(Config::MAIN_SLOT_B, ExpansionInterface::EXIDeviceType::None);
   Config::SetBase(Config::MAIN_AUDIO_BACKEND, std::string("Web Audio"));
   Config::SetBase(Config::MAIN_AUDIO_MUTED, false);
+  // AEML, NTUST: decode Wii Remote speaker data (played on the player's phone or here).
+  Config::SetBase(Config::MAIN_WIIMOTE_ENABLE_SPEAKER, true);
   Config::SetBase(Config::GFX_HACK_SKIP_XFB_COPY_TO_RAM, s_video_backend == "OGL");
   Config::SetBase(Config::GFX_HACK_COPY_EFB_SCALED, false);
   // §28cx: ubershaders DISCRIMINATOR (May-30). The UBO const-index fix made the

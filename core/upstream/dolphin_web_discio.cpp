@@ -921,6 +921,99 @@ void SetWiimoteConnected(int slot, int connected)
   }
 }
 
+// ---- AEML, NTUST: Wii Remote outputs (rumble, speaker) for the browser ----
+static std::atomic<int> s_rumble_bits{0};
+static std::atomic<int> s_rumble_latch{0};  // on at any time since the last read
+static std::atomic<int> s_speaker_to_phone{0};  // bit per remote: its phone plays the speaker
+struct WebSpeakerRing
+{
+  std::vector<std::int16_t> samples;
+  int rate = 0;
+};
+static std::mutex s_speaker_mutex;
+static WebSpeakerRing s_speaker[WEB_WIIMOTES];
+static constexpr std::size_t WEB_SPEAKER_MAX = 16000;  // about 2 s, oldest dropped
+
+void DolphinWeb_SetRumble(int index, int on)
+{
+  if (index < 0 || index >= WEB_WIIMOTES)
+    return;
+  if (on)
+  {
+    s_rumble_bits.fetch_or(1 << index, std::memory_order_relaxed);
+    s_rumble_latch.fetch_or(1 << index, std::memory_order_relaxed);  // short pulses are not lost
+  }
+  else
+    s_rumble_bits.fetch_and(~(1 << index), std::memory_order_relaxed);
+}
+
+int DolphinWeb_SpeakerPush(int index, const std::int16_t* samples, int count, int rate, int volume)
+{
+  if (index < 0 || index >= WEB_WIIMOTES || !samples || count <= 0 || rate <= 0)
+    return 0;
+  const bool to_phone = (s_speaker_to_phone.load(std::memory_order_relaxed) >> index) & 1;
+  if (!to_phone)
+    return 0;
+  const std::lock_guard<std::mutex> lock(s_speaker_mutex);
+  WebSpeakerRing& ring = s_speaker[index];
+  if (ring.rate != rate)
+  {
+    ring.samples.clear();
+    ring.rate = rate;
+  }
+  volume = std::clamp(volume, 0, 255);
+  for (int i = 0; i < count; ++i)
+    ring.samples.push_back(static_cast<std::int16_t>((int(samples[i]) * volume) / 255));
+  if (ring.samples.size() > WEB_SPEAKER_MAX)
+    ring.samples.erase(ring.samples.begin(),
+                       ring.samples.begin() + (ring.samples.size() - WEB_SPEAKER_MAX));
+  return 1;
+}
+
+#ifdef __EMSCRIPTEN__
+EMSCRIPTEN_KEEPALIVE
+#endif
+int AemlGetRumble()
+{
+  return s_rumble_bits.load(std::memory_order_relaxed) |
+         s_rumble_latch.exchange(0, std::memory_order_relaxed);
+}
+
+// mask: bit n = remote n's speaker goes to its phone (and is not played here).
+#ifdef __EMSCRIPTEN__
+EMSCRIPTEN_KEEPALIVE
+#endif
+void AemlSetSpeakerToPhone(int mask)
+{
+  s_speaker_to_phone.store(mask & 0xf, std::memory_order_relaxed);
+  const std::lock_guard<std::mutex> lock(s_speaker_mutex);
+  for (int i = 0; i < WEB_WIIMOTES; ++i)
+    if (!((mask >> i) & 1))
+      s_speaker[i] = {};
+}
+
+// Copies up to max queued speaker samples of remote index into out.
+// Returns the count; *rate_out receives the sample rate (Hz).
+#ifdef __EMSCRIPTEN__
+EMSCRIPTEN_KEEPALIVE
+#endif
+int AemlTakeSpeaker(int index, std::int16_t* out, int max, int* rate_out)
+{
+  if (index < 0 || index >= WEB_WIIMOTES || !out || max <= 0)
+    return 0;
+  const std::lock_guard<std::mutex> lock(s_speaker_mutex);
+  WebSpeakerRing& ring = s_speaker[index];
+  const int n = std::min<int>(max, int(ring.samples.size()));
+  if (n > 0)
+  {
+    std::copy(ring.samples.begin(), ring.samples.begin() + n, out);
+    ring.samples.erase(ring.samples.begin(), ring.samples.begin() + n);
+  }
+  if (rate_out)
+    *rate_out = ring.rate;
+  return n;
+}
+
 int DolphinWeb_WiimoteWanted(int slot)
 {
   if (slot < 0 || slot >= WEB_WIIMOTES)

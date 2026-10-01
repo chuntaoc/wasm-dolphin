@@ -1,5 +1,5 @@
 diff --git a/Source/Core/Core/CMakeLists.txt b/Source/Core/Core/CMakeLists.txt
-index 1bde8d4e7b..7ac467a6e0 100644
+index 1bde8d4e7b..d71022e610 100644
 --- a/Source/Core/Core/CMakeLists.txt
 +++ b/Source/Core/Core/CMakeLists.txt
 @@ -934,7 +934,7 @@ if(EMSCRIPTEN AND DOLPHIN_WASM_CORE_SOURCE)
@@ -7,12 +7,63 @@ index 1bde8d4e7b..7ac467a6e0 100644
      "-sDEFAULT_PTHREAD_STACK_SIZE=5242880"
      "-sPTHREAD_POOL_SIZE=16"
 -    "-sEXPORTED_FUNCTIONS=['_CoreInit','_SetVideoBackend','_SetCpuThread','_SetCpuCore','_SetCpuOverclock','_SetEmulationSpeed','_SetPresentationScale','_SetFastSoftwareRaster','_SetSoftwareTevHotCaseMode','_SetPpcWasmJitEnabled','_SetPpcProfileEnabled','_SetCachedInterpreterDisableMask','_GetCachedInterpreterDisableMask','_SetRendererFeatureMask','_GetRendererFeatureMask','_GetFrameRingEntryPtr','_GetFrameRingCapacity','_GetFrameRingEntrySize','_GetFrameRingHead','_GetPpcProfileStats','_BootDisc','_StopCore','_SetCorePaused','_ResetCore','_SaveCoreState','_LoadCoreState','_LoadStateFile','_SaveStateFile','_PumpHostJobs','_GetCoreState','_GetCoreStateName','_GetCoreStatus','_GetCoreTitle','_GetCoreTicksLow','_GetCoreTicksHigh','_GetCoreTicksPerSecond','_GetPPCPC','_GetLastLoadedCoreTicksLow','_GetLastLoadedCoreTicksHigh','_GetLastLoadedPPCPC','_GetLastLoadedCheckpointGeneration','_GetCPUCoreName','_AudioSampleRate','_AudioChannels','_AudioBufferFrames','_AudioBuffer','_MixAudio','_SetAudioMuted','_GetAudioStats','_GetPpcWasmBlockCompileCount','_GetPpcWasmBlockRunCount','_GetPpcWasmHelperStats','_SetWebGpuStateCacheEnabled','_SetWebGpuUboCacheEnabled','_SetWebGpuUboPackEnabled','_SetWebGpuGeometryPackEnabled','_SetWebGpuGeometryRangeEnabled','_SetWebGpuUploadArenaMiB','_SetWebGpuOwnershipTraceEnabled','_AcknowledgeWebGpuOwnershipTraceCapture','_GetWebGpuOwnershipTracePtr','_GetWebGpuOwnershipTraceCapacity','_SetWebGpuProducerProfileEnabled','_SetWebGpuDrawProfileEnabled','_SetWgpuDeepDiagnosticsEnabled','_SetWgpuIdleFifoTailElisionEnabled','_RunWebGpuDenseUboPacketSmoke','_RunWebGpuDenseUboRollbackSmoke','_GetWebGpuDenseUboSmokeError','_GetWebGpuStateCacheStats','_DolphinWeb_RecordModuleUs','_DolphinWeb_RecordInstanceUs','_DolphinWeb_RecordCacheHit','_DolphinWeb_RecordCacheMiss','_TestPpcWasmDirectCandidate','_TestDcbxLoopPattern','_TestPpcWasmDirectCandidateCompiles','_RunPpcWasmMultipleWordMemorySmoke','_RunPpcWasmSinglePrecisionArithmeticSmoke','_RunPpcWasmDoublePrecisionArithmeticSmoke','_RunPpcWasmPairedQuantizedMemorySmoke','_RunPpcWasmFloatCompareSmoke','_GetVideoStats','_RunWasmJitSmoke','_RunPpcWasmAddiSmoke','_RunPpcWasmStateAddiSmoke','_RunPpcWasmDolphinStateAddiSmoke','_RunPpcWasmIntegerBlockSmoke','_MountDisc','_Reset','_SetInputMask','_SetInputState','_RunFrame','_FrameWidth','_FrameHeight','_FrameBuffer','_SaveState','_LoadState','_GetFrame','_GetFrameSignalPtr','_GetGameId','_GetGameTitle','_GetMakerId','_GetPlatform','_GetRegion','_GetDiscNumber','_GetApploaderDate','_GetApploaderSize','_GetBootDolOffset','_GetBootDolSize','_GetFstOffset','_GetFstSize','_GetRawSize','_GetDataSize','_GetRootEntryCount','_GetRootEntryName','_GetRootEntryPath','_GetRootEntryIsDirectory','_GetRootEntryOffset','_GetRootEntrySize','_ReadDisc','_ReadDiscFile','_malloc','_free']"
-+    "-sEXPORTED_FUNCTIONS=['_CoreInit','_SetVideoBackend','_SetCpuThread','_SetCpuCore','_SetCpuOverclock','_SetEmulationSpeed','_SetPresentationScale','_SetFastSoftwareRaster','_SetSoftwareTevHotCaseMode','_SetPpcWasmJitEnabled','_SetPpcProfileEnabled','_SetCachedInterpreterDisableMask','_GetCachedInterpreterDisableMask','_SetRendererFeatureMask','_GetRendererFeatureMask','_GetFrameRingEntryPtr','_GetFrameRingCapacity','_GetFrameRingEntrySize','_GetFrameRingHead','_GetPpcProfileStats','_BootDisc','_StopCore','_SetCorePaused','_ResetCore','_SaveCoreState','_LoadCoreState','_LoadStateFile','_SaveStateFile','_PumpHostJobs','_GetCoreState','_GetCoreStateName','_GetCoreStatus','_GetCoreTitle','_GetCoreTicksLow','_GetCoreTicksHigh','_GetCoreTicksPerSecond','_GetPPCPC','_GetLastLoadedCoreTicksLow','_GetLastLoadedCoreTicksHigh','_GetLastLoadedPPCPC','_GetLastLoadedCheckpointGeneration','_GetCPUCoreName','_AudioSampleRate','_AudioChannels','_AudioBufferFrames','_AudioBuffer','_MixAudio','_SetAudioMuted','_GetAudioStats','_GetPpcWasmBlockCompileCount','_GetPpcWasmBlockRunCount','_GetPpcWasmHelperStats','_SetWebGpuStateCacheEnabled','_SetWebGpuUboCacheEnabled','_SetWebGpuUboPackEnabled','_SetWebGpuGeometryPackEnabled','_SetWebGpuGeometryRangeEnabled','_SetWebGpuUploadArenaMiB','_SetWebGpuOwnershipTraceEnabled','_AcknowledgeWebGpuOwnershipTraceCapture','_GetWebGpuOwnershipTracePtr','_GetWebGpuOwnershipTraceCapacity','_SetWebGpuProducerProfileEnabled','_SetWebGpuDrawProfileEnabled','_SetWgpuDeepDiagnosticsEnabled','_SetWgpuIdleFifoTailElisionEnabled','_RunWebGpuDenseUboPacketSmoke','_RunWebGpuDenseUboRollbackSmoke','_GetWebGpuDenseUboSmokeError','_GetWebGpuStateCacheStats','_DolphinWeb_RecordModuleUs','_DolphinWeb_RecordInstanceUs','_DolphinWeb_RecordCacheHit','_DolphinWeb_RecordCacheMiss','_TestPpcWasmDirectCandidate','_TestDcbxLoopPattern','_TestPpcWasmDirectCandidateCompiles','_RunPpcWasmMultipleWordMemorySmoke','_RunPpcWasmSinglePrecisionArithmeticSmoke','_RunPpcWasmDoublePrecisionArithmeticSmoke','_RunPpcWasmPairedQuantizedMemorySmoke','_RunPpcWasmFloatCompareSmoke','_GetVideoStats','_RunWasmJitSmoke','_RunPpcWasmAddiSmoke','_RunPpcWasmStateAddiSmoke','_RunPpcWasmDolphinStateAddiSmoke','_RunPpcWasmIntegerBlockSmoke','_MountDisc','_Reset','_SetInputMask','_SetInputState','_SetWiimoteState','_SetWiimoteConnected','_RunFrame','_FrameWidth','_FrameHeight','_FrameBuffer','_SaveState','_LoadState','_GetFrame','_GetFrameSignalPtr','_GetGameId','_GetGameTitle','_GetMakerId','_GetPlatform','_GetRegion','_GetDiscNumber','_GetApploaderDate','_GetApploaderSize','_GetBootDolOffset','_GetBootDolSize','_GetFstOffset','_GetFstSize','_GetRawSize','_GetDataSize','_GetRootEntryCount','_GetRootEntryName','_GetRootEntryPath','_GetRootEntryIsDirectory','_GetRootEntryOffset','_GetRootEntrySize','_ReadDisc','_ReadDiscFile','_malloc','_free']"
++    "-sEXPORTED_FUNCTIONS=['_CoreInit','_SetVideoBackend','_SetCpuThread','_SetCpuCore','_SetCpuOverclock','_SetEmulationSpeed','_SetPresentationScale','_SetFastSoftwareRaster','_SetSoftwareTevHotCaseMode','_SetPpcWasmJitEnabled','_SetPpcProfileEnabled','_SetCachedInterpreterDisableMask','_GetCachedInterpreterDisableMask','_SetRendererFeatureMask','_GetRendererFeatureMask','_GetFrameRingEntryPtr','_GetFrameRingCapacity','_GetFrameRingEntrySize','_GetFrameRingHead','_GetPpcProfileStats','_BootDisc','_StopCore','_SetCorePaused','_ResetCore','_SaveCoreState','_LoadCoreState','_LoadStateFile','_SaveStateFile','_PumpHostJobs','_GetCoreState','_GetCoreStateName','_GetCoreStatus','_GetCoreTitle','_GetCoreTicksLow','_GetCoreTicksHigh','_GetCoreTicksPerSecond','_GetPPCPC','_GetLastLoadedCoreTicksLow','_GetLastLoadedCoreTicksHigh','_GetLastLoadedPPCPC','_GetLastLoadedCheckpointGeneration','_GetCPUCoreName','_AudioSampleRate','_AudioChannels','_AudioBufferFrames','_AudioBuffer','_MixAudio','_SetAudioMuted','_GetAudioStats','_GetPpcWasmBlockCompileCount','_GetPpcWasmBlockRunCount','_GetPpcWasmHelperStats','_SetWebGpuStateCacheEnabled','_SetWebGpuUboCacheEnabled','_SetWebGpuUboPackEnabled','_SetWebGpuGeometryPackEnabled','_SetWebGpuGeometryRangeEnabled','_SetWebGpuUploadArenaMiB','_SetWebGpuOwnershipTraceEnabled','_AcknowledgeWebGpuOwnershipTraceCapture','_GetWebGpuOwnershipTracePtr','_GetWebGpuOwnershipTraceCapacity','_SetWebGpuProducerProfileEnabled','_SetWebGpuDrawProfileEnabled','_SetWgpuDeepDiagnosticsEnabled','_SetWgpuIdleFifoTailElisionEnabled','_RunWebGpuDenseUboPacketSmoke','_RunWebGpuDenseUboRollbackSmoke','_GetWebGpuDenseUboSmokeError','_GetWebGpuStateCacheStats','_DolphinWeb_RecordModuleUs','_DolphinWeb_RecordInstanceUs','_DolphinWeb_RecordCacheHit','_DolphinWeb_RecordCacheMiss','_TestPpcWasmDirectCandidate','_TestDcbxLoopPattern','_TestPpcWasmDirectCandidateCompiles','_RunPpcWasmMultipleWordMemorySmoke','_RunPpcWasmSinglePrecisionArithmeticSmoke','_RunPpcWasmDoublePrecisionArithmeticSmoke','_RunPpcWasmPairedQuantizedMemorySmoke','_RunPpcWasmFloatCompareSmoke','_GetVideoStats','_RunWasmJitSmoke','_RunPpcWasmAddiSmoke','_RunPpcWasmStateAddiSmoke','_RunPpcWasmDolphinStateAddiSmoke','_RunPpcWasmIntegerBlockSmoke','_MountDisc','_Reset','_SetInputMask','_SetInputState','_SetWiimoteState','_SetWiimoteConnected','_AemlGetRumble','_AemlSetSpeakerToPhone','_AemlTakeSpeaker','_RunFrame','_FrameWidth','_FrameHeight','_FrameBuffer','_SaveState','_LoadState','_GetFrame','_GetFrameSignalPtr','_GetGameId','_GetGameTitle','_GetMakerId','_GetPlatform','_GetRegion','_GetDiscNumber','_GetApploaderDate','_GetApploaderSize','_GetBootDolOffset','_GetBootDolSize','_GetFstOffset','_GetFstSize','_GetRawSize','_GetDataSize','_GetRootEntryCount','_GetRootEntryName','_GetRootEntryPath','_GetRootEntryIsDirectory','_GetRootEntryOffset','_GetRootEntrySize','_ReadDisc','_ReadDiscFile','_malloc','_free']"
      # WORKERFS and NODEFS are named here so they survive dead-code
      # elimination. -lworkerfs.js / -lnodefs.js above only make the JS
      # libraries available to the link; current Emscripten still drops a JS
+diff --git a/Source/Core/Core/HW/WiimoteEmu/Speaker.cpp b/Source/Core/Core/HW/WiimoteEmu/Speaker.cpp
+index 0394ae9236..14ebf87e53 100644
+--- a/Source/Core/Core/HW/WiimoteEmu/Speaker.cpp
++++ b/Source/Core/Core/HW/WiimoteEmu/Speaker.cpp
+@@ -54,6 +54,14 @@ static s16 adpcm_yamaha_expand_nibble(ADPCMState& s, u8 nibble)
+   return s.predictor;
+ }
+ 
++#ifdef __EMSCRIPTEN__
++// AEML, NTUST: decoded speaker audio is also handed to the browser page, which
++// can play it on that player's phone. Returns 1 when the phone plays it, so the
++// computer does not play it a second time.
++extern "C" int DolphinWeb_SpeakerPush(int index, const s16* samples, int count, int rate,
++                                      int volume);
++#endif
++
+ void SpeakerLogic::SpeakerData(const u8* data, int length, float speaker_pan)
+ {
+   // TODO: should we still process samples for the decoder state?
+@@ -126,6 +134,15 @@ void SpeakerLogic::SpeakerData(const u8* data, int length, float speaker_pan)
+   const u32 l_volume = std::min(u32(std::min(1.f - speaker_pan, 1.f) * volume), 255u);
+   const u32 r_volume = std::min(u32(std::min(1.f + speaker_pan, 1.f) * volume), 255u);
+ 
++#ifdef __EMSCRIPTEN__
++  {
++    const unsigned int web_rate = (sample_rate_dividend / reg_data.sample_rate) * 2;
++    if (DolphinWeb_SpeakerPush(m_web_index, samples.data(), int(sample_length), int(web_rate),
++                               int(std::min(volume, 255.0))) != 0)
++      return;
++  }
++#endif
++
+   auto& system = Core::System::GetInstance();
+   SoundStream* sound_stream = system.GetSoundStream();
+ 
+diff --git a/Source/Core/Core/HW/WiimoteEmu/Speaker.h b/Source/Core/Core/HW/WiimoteEmu/Speaker.h
+index 9a6a652bb1..3d9640acce 100644
+--- a/Source/Core/Core/HW/WiimoteEmu/Speaker.h
++++ b/Source/Core/Core/HW/WiimoteEmu/Speaker.h
+@@ -31,6 +31,11 @@ public:
+ 
+   void SetSpeakerEnabled(bool enabled);
+ 
++#ifdef __EMSCRIPTEN__
++  // AEML, NTUST: which Wii Remote this speaker belongs to (browser routing).
++  int m_web_index = 0;
++#endif
++
+ private:
+   // Pan is -1.0 to +1.0
+   void SpeakerData(const u8* data, int length, float speaker_pan);
 diff --git a/Source/Core/Core/HW/WiimoteEmu/WiimoteEmu.cpp b/Source/Core/Core/HW/WiimoteEmu/WiimoteEmu.cpp
-index 7fc81f6321..624ccef4b8 100644
+index 7fc81f6321..e2fcf82ed6 100644
 --- a/Source/Core/Core/HW/WiimoteEmu/WiimoteEmu.cpp
 +++ b/Source/Core/Core/HW/WiimoteEmu/WiimoteEmu.cpp
 @@ -3,6 +3,11 @@
@@ -35,7 +86,17 @@ index 7fc81f6321..624ccef4b8 100644
  #include "Core/Core.h"
  #include "Core/HW/Wiimote.h"
  
-@@ -476,9 +482,151 @@ GetPassthroughCameraPoints(ControllerEmu::IRPassthrough* ir_passthrough)
+@@ -206,6 +212,9 @@ void Wiimote::Reset()
+ Wiimote::Wiimote(const unsigned int index) : m_index(index), m_bt_device_index(index)
+ {
+   using Translatability = ControllerEmu::Translatability;
++#ifdef __EMSCRIPTEN__
++  m_speaker_logic.m_web_index = int(index);
++#endif
+ 
+   // Buttons
+   groups.emplace_back(m_buttons = new ControllerEmu::Buttons(BUTTONS_GROUP));
+@@ -476,9 +485,151 @@ GetPassthroughCameraPoints(ControllerEmu::IRPassthrough* ir_passthrough)
    return camera_points;
  }
  
@@ -187,7 +248,7 @@ index 7fc81f6321..624ccef4b8 100644
    // Hotkey / settings modifier
    // Data is later accessed in IsSideways and IsUpright
    m_hotkeys->UpdateState();
-@@ -516,12 +664,50 @@ void Wiimote::BuildDesiredWiimoteState(DesiredWiimoteState* target_state,
+@@ -516,12 +667,50 @@ void Wiimote::BuildDesiredWiimoteState(DesiredWiimoteState* target_state,
      target_state->camera_points = DesiredWiimoteState::DEFAULT_CAMERA;
    }
  
@@ -238,7 +299,7 @@ index 7fc81f6321..624ccef4b8 100644
    // Build Extension state.
    // This also allows the extension to perform any regular duties it may need.
    // (e.g. Nunchuk motion simulation step)
-@@ -677,6 +863,41 @@ ButtonData Wiimote::GetCurrentlyPressedButtons()
+@@ -677,6 +866,41 @@ ButtonData Wiimote::GetCurrentlyPressedButtons()
    const auto lock = GetStateLock();
  
    ButtonData buttons{};
@@ -280,6 +341,21 @@ index 7fc81f6321..624ccef4b8 100644
    m_buttons->GetState(&buttons.hex, button_bitmasks, m_input_override_function);
    m_dpad->GetState(&buttons.hex, IsSideways() ? dpad_sideways_bitmasks : dpad_bitmasks,
                     m_input_override_function);
+@@ -819,8 +1043,14 @@ bool Wiimote::IsUpright() const
+   return m_upright_setting.GetValue() ^ upright_modifier_toggle ^ upright_modifier_switch;
+ }
+ 
++#ifdef __EMSCRIPTEN__
++extern "C" void DolphinWeb_SetRumble(int index, int on);
++#endif
+ void Wiimote::SetRumble(bool on)
+ {
++#ifdef __EMSCRIPTEN__
++  DolphinWeb_SetRumble(int(m_index), on ? 1 : 0);
++#endif
+   const auto lock = GetStateLock();
+   m_rumble->controls.front()->control_ref->State(on);
+ }
 diff --git a/Source/Core/Core/IOS/USB/Bluetooth/BTEmu.cpp b/Source/Core/Core/IOS/USB/Bluetooth/BTEmu.cpp
 index 000883ec3f..b11f4bedc6 100644
 --- a/Source/Core/Core/IOS/USB/Bluetooth/BTEmu.cpp

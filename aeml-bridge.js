@@ -22,7 +22,7 @@ const ALLOWED_PARENTS = [
 const params = new URLSearchParams(location.search);
 const EMBED = params.get("embed") === "aeml" && window.parent !== window;
 const SIG = "AEML, NTUST";
-const BRIDGE_VER = "2.2";
+const BRIDGE_VER = "2.3";
 let parentOrigin = null;
 
 function allowed(origin) { return ALLOWED_PARENTS.some((re) => re.test(origin)); }
@@ -44,6 +44,13 @@ if (EMBED) {
     #aeml-pick button{font:600 18px system-ui,sans-serif;padding:14px 22px;border-radius:12px;border:2px solid #22c3ee;background:#0f1720;color:#e6edf3;cursor:pointer}
     #aeml-gesture{position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55)}
     #aeml-gesture button{font:600 18px system-ui,sans-serif;padding:14px 22px;border-radius:12px;border:2px solid #22c3ee;background:#0f1720;color:#e6edf3;cursor:pointer}
+    #aeml-lib{display:flex;flex-direction:column;gap:6px;min-width:min(440px,90vw);max-height:46vh;overflow:auto;margin-top:6px}
+    #aeml-lib .row{display:flex;gap:6px;align-items:stretch}
+    #aeml-lib .row button{font:600 15px system-ui,sans-serif;padding:9px 12px;border-radius:10px;text-align:left;flex:1;border-color:#34d399}
+    #aeml-lib .row button.del{flex:none;border-color:#3a4f66;color:#8aa0b4;text-align:center}
+    #aeml-lib h5{margin:4px 0 0;font:600 14px system-ui;color:#e6edf3}
+    #aeml-pick label{display:flex;gap:6px;align-items:center;color:#cfe9f3;cursor:pointer}
+    #aeml-libst{visibility:visible!important;position:fixed;right:8px;top:6px;z-index:2147483646;font:12px system-ui;color:#cfe9f3;background:rgba(5,8,12,.7);padding:3px 8px;border-radius:8px;pointer-events:none}
     #aeml-mark{visibility:visible!important;position:fixed;left:8px;bottom:6px;z-index:2147483646;font:11px system-ui;color:rgba(255,255,255,.35);pointer-events:none}`;
   document.head.appendChild(css);
   const mark = document.createElement("div");
@@ -293,13 +300,127 @@ function showPicker() {
   inp.onchange = () => { const f = inp.files[0]; if (f) { wrap.remove(); startLoad(f); } };
   wrap.addEventListener("dragover", (e) => e.preventDefault());
   wrap.addEventListener("drop", (e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) { wrap.remove(); startLoad(f); } });
-  wrap.append(b, note, inp); document.body.appendChild(wrap);
+  wrap.append(b, note, inp);
+  if (libSupported()) {
+    const keep = document.createElement("label");
+    const cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = libWanted();
+    cb.onchange = () => { try { localStorage.setItem("aeml-lib-keep", cb.checked ? "1" : "0"); } catch (e) {} };
+    keep.append(cb, document.createTextNode("💾 保存在這個瀏覽器，下次免選檔 / Keep a copy here for next time"));
+    const lib = document.createElement("div"); lib.id = "aeml-lib";
+    wrap.append(keep, lib);
+    libPaint(lib, wrap);
+  }
+  document.body.appendChild(wrap);
 }
-function startLoad(file, copied) {
-  diag("game", "load start: " + file.name + " (" + (file.size / 1048576).toFixed(1) + " MB)" + (copied ? " [copied from page]" : " [picked in frame]"));
+
+/* ---- recent games kept in this browser (AEML, NTUST) ----
+ * A copy of the disc image is saved in the browser's private file storage
+ * (Origin Private File System) after it boots, so next time it starts with
+ * one click. The copy belongs to this blog + core pair and is deleted with
+ * the browser's site data or the ✕ button. */
+const LIB_KEY = "aeml-lib";
+let libBusy = null;  /* name of the file being saved */
+function libSupported() { return !!(navigator.storage && navigator.storage.getDirectory); }
+function libWanted() { try { return localStorage.getItem("aeml-lib-keep") !== "0"; } catch (e) { return false; } }
+function libList() { try { const l = JSON.parse(localStorage.getItem(LIB_KEY) || "[]"); return Array.isArray(l) ? l : []; } catch (e) { return []; } }
+function libSave(l) { try { localStorage.setItem(LIB_KEY, JSON.stringify(l)); } catch (e) {} }
+async function libDir() { const root = await navigator.storage.getDirectory(); return root.getDirectoryHandle("aeml-games", { create: true }); }
+function libFileName(name) { return (name.replace(/[^\w.\- ]/g, "_").slice(0, 100) || "game") + "-" + Date.now().toString(36); }
+function gb(n) { return n >= 1073741824 ? (n / 1073741824).toFixed(2) + " GB" : (n / 1048576).toFixed(0) + " MB"; }
+function libStatus(text) {
+  let el = document.getElementById("aeml-libst");
+  if (!text) { if (el) el.remove(); return; }
+  if (!el) { el = document.createElement("div"); el.id = "aeml-libst"; document.body.appendChild(el); }
+  el.textContent = text;
+}
+async function libPaint(box, wrap) {
+  box.textContent = "";
+  const list = libList();
+  if (!list.length) return;
+  const h = document.createElement("h5"); h.textContent = "最近玩過的遊戲 / Recent games"; box.appendChild(h);
+  list.forEach((g) => {
+    const row = document.createElement("div"); row.className = "row";
+    const go = document.createElement("button");
+    go.textContent = "▶ " + (g.title || g.name) + "  ·  " + gb(g.size);
+    go.title = g.name;
+    go.onclick = async () => {
+      try {
+        const f = await (await (await libDir()).getFileHandle(g.file)).getFile();
+        if (f.size !== g.size) throw new Error("incomplete copy");
+        const named = new File([f], g.name, { type: f.type });
+        g.t = Date.now(); libSave([g].concat(libList().filter((x) => x.file !== g.file)));
+        wrap.remove(); startLoad(named, false, true);
+      } catch (err) {
+        diag("lib", "open failed " + g.name + ": " + err);
+        libSave(libList().filter((x) => x.file !== g.file)); libPaint(box, wrap);
+      }
+    };
+    const del = document.createElement("button"); del.className = "del"; del.textContent = "✕"; del.title = "刪除這份保存 / Delete";
+    del.onclick = async () => {
+      libSave(libList().filter((x) => x.file !== g.file));
+      try { await (await libDir()).removeEntry(g.file); } catch (e) {}
+      diag("lib", "deleted " + g.name); libPaint(box, wrap);
+    };
+    row.append(go, del); box.appendChild(row);
+  });
+  try {
+    const est = await navigator.storage.estimate();
+    const used = list.reduce((a, g) => a + g.size, 0);
+    const n = document.createElement("div"); n.style.fontSize = "12px";
+    n.textContent = "已用 " + gb(used) + "（可用約 " + gb(Math.max(0, est.quota - est.usage)) + "） / used " + gb(used);
+    box.appendChild(n);
+  } catch (e) {}
+  libCleanup();
+}
+async function libCleanup() {  /* remove unfinished copies */
+  if (libBusy) return;
+  try {
+    const dir = await libDir(), keep = new Set(libList().map((g) => g.file));
+    for await (const [name] of dir.entries()) if (!keep.has(name)) { await dir.removeEntry(name).catch(() => {}); diag("lib", "removed leftover " + name); }
+  } catch (e) {}
+}
+async function libStore(file, title) {
+  if (!libSupported() || !libWanted() || libBusy) return;
+  const list = libList();
+  if (list.some((g) => g.name === file.name && g.size === file.size)) return;
+  const est = await navigator.storage.estimate().catch(() => null);
+  if (est && est.quota - est.usage < file.size + 256 * 1048576) {
+    diag("lib", "not saved, not enough browser storage: need " + gb(file.size) + ", free " + gb(est.quota - est.usage));
+    libStatus("💾 瀏覽器空間不足，未保存 / not enough space"); setTimeout(() => libStatus(""), 6000);
+    return;
+  }
+  const fname = libFileName(file.name);
+  libBusy = fname;
+  try {
+    if (navigator.storage.persist) navigator.storage.persist().catch(() => {});
+    const dir = await libDir();
+    const w = await (await dir.getFileHandle(fname, { create: true })).createWritable();
+    const reader = file.stream().getReader();
+    let got = 0, last = 0;
+    for (;;) {
+      const r = await reader.read();
+      if (r.done) break;
+      await w.write(r.value); got += r.value.length;
+      const now = performance.now();
+      if (now - last > 500) { last = now; libStatus("💾 保存到瀏覽器 " + Math.floor(100 * got / file.size) + "%"); }
+    }
+    await w.close();
+    if (got !== file.size) throw new Error("short copy");
+    libSave([{ name: file.name, title: title || "", file: fname, size: file.size, t: Date.now() }].concat(libList()));
+    diag("lib", "saved " + file.name + " (" + gb(file.size) + ")");
+    libStatus("💾 已保存，下次可直接開啟 / saved"); setTimeout(() => libStatus(""), 4000);
+  } catch (err) {
+    diag("lib", "save failed: " + err);
+    libStatus("💾 保存失敗 / save failed"); setTimeout(() => libStatus(""), 5000);
+    try { await (await libDir()).removeEntry(fname); } catch (e) {}
+  } finally { libBusy = null; }
+}
+function startLoad(file, copied, fromLib) {
+  diag("game", "load start: " + file.name + " (" + (file.size / 1048576).toFixed(1) + " MB)" + (fromLib ? " [saved copy]" : copied ? " [copied from page]" : " [picked in frame]"));
   if (!copied) { span = [0, 100]; curPct = 0; }
   post({ cmd: "picked", name: file.name, size: file.size });
-  loadGame(file).catch((err) => post({ cmd: "error", message: String((err && err.message) || err) }));
+  loadGame(file).then((title) => { if (!fromLib) setTimeout(() => libStore(file, title), 4000); })
+    .catch((err) => post({ cmd: "error", message: String((err && err.message) || err) }));
 }
 async function adoptParentFile(file) {
   if (file.size > COPY_LIMIT) { showPicker(); post({ cmd: "error", message: "too-big" }); return; }
@@ -331,6 +452,35 @@ async function loadGame(file) {
     const mute = document.getElementById("muteButton");
     if (mute && /^muted$/i.test(mute.getAttribute("aria-label") || "")) askGesture();
   }, 300);
+  return host.game.name || "";
+}
+
+/* ---- Wii Remote outputs -> phones (AEML, NTUST) ----
+ * While the page asks for it, poll the core about 20 times a second for the
+ * rumble motors and for speaker audio of remotes whose phone plays it. */
+let outOn = false, outMask = 0, outTimer = 0, outBusy = false, outRumble = -1, outWarned = false;
+function setOutputs(on, mask) {
+  outOn = !!on; outMask = (mask | 0) & 15;
+  clearInterval(outTimer); outTimer = 0;
+  if (outOn) outTimer = setInterval(pollOutputs, 50);
+  else { const a = window.__host && window.__host.adapter; if (a && a.wiimoteOutputs) a.wiimoteOutputs(0).catch(() => {}); }
+}
+async function pollOutputs() {
+  const host = window.__host, a = host && host.adapter;
+  if (outBusy || !a || typeof a.wiimoteOutputs !== "function" || !host.running) return;
+  outBusy = true;
+  try {
+    const r = await a.wiimoteOutputs(outMask);
+    if (!r) return;
+    if (!r.supported) { if (!outWarned) { outWarned = true; diag("out", "core has no rumble/speaker outputs (old core)"); } return; }
+    const audio = (r.audio || []).map((x) => ({ p: x.p, rate: x.rate, pcm: x.pcm }));
+    if (r.rumble !== outRumble || audio.length) {
+      if (r.rumble !== outRumble && diagOn) diag("out", "rumble " + [0, 1, 2, 3].map((i) => (r.rumble >> i) & 1 ? "P" + (i + 1) : "-").join(" "));
+      outRumble = r.rumble;
+      post({ cmd: "outputs", rumble: r.rumble, audio }, audio.map((x) => x.pcm.buffer));
+    }
+  } catch (e) { /* core busy or reloading */ }
+  finally { outBusy = false; }
 }
 
 async function saveState(id) {
@@ -369,6 +519,7 @@ if (EMBED) {
         applyPlayers(d.on);
         break;
       case "pick": showPicker(); break;
+      case "outputs": setOutputs(d.on, d.speaker); break;
       case "load":
         post({ cmd: "ack", size: d.file && d.file.size });
         if (d.file instanceof Blob) adoptParentFile(d.file).catch(fail); else fail("no file");

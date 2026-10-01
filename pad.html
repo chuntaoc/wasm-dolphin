@@ -1,6 +1,6 @@
 <!doctype html>
 <!-- =====================================================================
-     AEML Wii phone controller  v2.2  —  (c) AEML, NTUST
+     AEML Wii phone controller  v2.3  —  (c) AEML, NTUST
      Opened on the phone from the QR code on the emulator page.
      Sends buttons, aim (orientation), accelerometer and gyroscope
      (MotionPlus) to the emulator page over a WebRTC data channel.
@@ -78,7 +78,7 @@ button,select,input{touch-action:manipulation}
 <div id="banner" hidden></div>
 <div id="link"><div class="lk"><div id="linkTxt"></div><div class="lkSub"><span class="zh">電腦頁面需保持開啟、勾選「藍牙／手機連結」</span><span class="en">Keep the emulator page open with Bluetooth / Phone checked</span></div></div></div>
 <div id="pad"></div>
-<div id="wm">v2.2 · <span id="roleTxt"></span> <span id="aimTxt"></span> <span id="sensTxt" hidden><span class="zh">感測器未啟用</span><span class="en">sensors off</span></span> · AEML, NTUST</div>
+<div id="wm">v2.3 · <span id="roleTxt"></span> <span id="aimTxt"></span> <span id="sensTxt" hidden><span class="zh">感測器未啟用</span><span class="en">sensors off</span></span> · AEML, NTUST</div>
 
 <!-- start sheet: one tap to unlock sensors, fullscreen and wake lock -->
 <div class="sheet" id="start">
@@ -107,6 +107,9 @@ button,select,input{touch-action:manipulation}
  <label><input type="checkbox" id="sMp" checked> <span class="zh">MotionPlus（陀螺儀）</span><span class="en">MotionPlus (gyroscope)</span></label>
  <label><input type="checkbox" id="sTilt" checked> <span class="zh">體感傾斜／揮動</span><span class="en">Tilt and swing</span></label>
  <label><input type="checkbox" id="sVib" checked> <span class="zh">按鍵震動</span><span class="en">Vibrate on press</span></label>
+ <label><input type="checkbox" id="sRum" checked> <span class="zh">遊戲震動回饋</span><span class="en">Game rumble</span></label>
+ <label><input type="checkbox" id="sSpk" checked> <span class="zh">遙控器喇叭聲音（由手機播放）</span><span class="en">Wii Remote speaker sound on this phone</span></label>
+ <p id="iosNote" hidden style="font-size:13px"><span class="zh">iPhone：網頁無法使用震動馬達；若聽不到喇叭聲，請關閉側邊的靜音開關。</span><span class="en">iPhone: web pages cannot use the vibration motor; if the speaker is silent, turn off the side mute switch.</span></p>
  <button class="big" id="sDone" type="button"><span class="zh">完成</span><span class="en">Done</span></button>
 </div>
 
@@ -158,14 +161,19 @@ button,select,input{touch-action:manipulation}
 
   /* ---------- settings ---------- */
   var ROLE = (q.get('role') === 'nunchuk' || ls('role') === 'nunchuk' && q.get('role') !== 'remote') ? 'nunchuk' : 'remote';
-  var cfg = { grip: ls('grip') || 'auto', mp: ls('mp') !== '0', tilt: ls('tilt') !== '0', vib: ls('vib') !== '0' };
+  var cfg = { grip: ls('grip') || 'auto', mp: ls('mp') !== '0', tilt: ls('tilt') !== '0', vib: ls('vib') !== '0', rum: ls('rum') !== '0', spk: ls('spk') !== '0' };
+  /* stable id of this phone, so a dropped link gets its old player back */
+  var PID = ls('pid');
+  if (!PID || !/^\w{6,16}$/.test(PID)) { PID = Math.random().toString(36).slice(2, 12); ls('pid', PID); }
   var WANT = 0, PLAYER = 0, NPHONES = 1;  /* WANT: player chosen by hand (0 = auto); PLAYER: given by the emulator page */
-  $('#sGrip').value = cfg.grip; $('#sRole').value = ROLE; $('#sMp').checked = cfg.mp; $('#sTilt').checked = cfg.tilt; $('#sVib').checked = cfg.vib;
+  $('#sGrip').value = cfg.grip; $('#sRole').value = ROLE; $('#sMp').checked = cfg.mp; $('#sTilt').checked = cfg.tilt; $('#sVib').checked = cfg.vib; $('#sRum').checked = cfg.rum; $('#sSpk').checked = cfg.spk;
   $('#bSet').onclick = function () { $('#settings').hidden = false; };
   $('#sDone').onclick = function () {
     ROLE = $('#sRole').value; ls('role', ROLE); WANT = +$('#sWant').value || 0; applyRole();
     cfg.grip = $('#sGrip').value; cfg.mp = $('#sMp').checked; cfg.tilt = $('#sTilt').checked; cfg.vib = $('#sVib').checked;
+    cfg.rum = $('#sRum').checked; cfg.spk = $('#sSpk').checked; if (!cfg.rum) rumble(false); if (cfg.spk) audioUnlock();
     ls('grip', cfg.grip); ls('mp', cfg.mp ? '1' : '0'); ls('tilt', cfg.tilt ? '1' : '0'); ls('vib', cfg.vib ? '1' : '0');
+    ls('rum', cfg.rum ? '1' : '0'); ls('spk', cfg.spk ? '1' : '0');
     $('#settings').hidden = true; layout(); dirty = true;
   };
 
@@ -472,7 +480,63 @@ button,select,input{touch-action:manipulation}
         if (!(d.n > 0)) { var fb = $('#banner'); fb.textContent = ''; fb.appendChild(document.querySelector('#msgs [data-m="plfull"]').cloneNode(true)); fb.hidden = false; }
       }
     }
-    if (d.t === 'rumble' && cfg.vib && navigator.vibrate) { try { navigator.vibrate(d.on ? 200 : 0); } catch (e) {} }
+    if (d.t === 'rumble') rumble(!!d.on);
+    if (d.t === 'spk') playSpeaker(d.r, d.a);
+  }
+
+  /* ---------- game rumble (v2.3) ----------
+   * Android: vibration motor. iPhone: Safari gives web pages no vibration API. */
+  var rumbleOn = false, rumbleT = 0;
+  function rumble(on) {
+    on = on && cfg.rum && ROLE !== 'nunchuk';
+    if (!navigator.vibrate) return;
+    clearTimeout(rumbleT);
+    if (on) {
+      try { navigator.vibrate(1200); } catch (e) {}
+      rumbleT = setTimeout(function () { rumble(false); }, 1300);  /* stop if the page stops saying "on" */
+    } else if (rumbleOn) { try { navigator.vibrate(0); } catch (e) {} }
+    rumbleOn = on;
+  }
+
+  /* ---------- Wii Remote speaker (v2.3) ----------
+   * The emulator sends the remote's speaker audio as 8-bit mu-law (base64);
+   * it is queued with a small cushion so the network jitter does not click. */
+  var actx = null, spkNext = 0, MU = null;
+  function audioUnlock() {
+    try {
+      if (navigator.audioSession) navigator.audioSession.type = 'playback';  /* iOS 17+: play even in silent mode */
+    } catch (e) {}
+    try {
+      if (!actx) { var AC = window.AudioContext || window.webkitAudioContext; if (AC) actx = new AC(); }
+      if (actx && actx.state !== 'running') actx.resume();
+      if (actx) { var b = actx.createBuffer(1, 1, 22050), s0 = actx.createBufferSource(); s0.buffer = b; s0.connect(actx.destination); s0.start(0); }
+    } catch (e) {}
+  }
+  function muTable() {
+    MU = new Float32Array(256);
+    for (var i = 0; i < 256; i++) {
+      var u = ~i & 0xff, sign = u & 0x80, exp = (u >> 4) & 7, man = u & 0x0f;
+      var v = (((man << 3) + 0x84) << exp) - 0x84;
+      MU[i] = (sign ? -v : v) / 32768;
+    }
+  }
+  function playSpeaker(rate, b64) {
+    if (!cfg.spk || ROLE === 'nunchuk' || !actx || !b64 || !(rate > 0)) return;
+    if (!MU) muTable();
+    var bin; try { bin = atob(b64); } catch (e) { return; }
+    var n = bin.length; if (!n) return;
+    var up = rate < 8000 ? Math.ceil(8000 / rate) : 1;  /* some browsers want >= 8 kHz buffers */
+    var buf = actx.createBuffer(1, n * up, rate * up), ch = buf.getChannelData(0);
+    var prev = MU[bin.charCodeAt(0)];
+    for (var i = 0; i < n; i++) {
+      var v = MU[bin.charCodeAt(i)];
+      for (var j = 0; j < up; j++) ch[i * up + j] = prev + (v - prev) * (j + 1) / up;
+      prev = v;
+    }
+    var src = actx.createBufferSource(); src.buffer = buf; src.connect(actx.destination);
+    var now = actx.currentTime;
+    if (spkNext < now + 0.03 || spkNext > now + 0.5) spkNext = now + 0.08;  /* (re)start with an 80 ms cushion */
+    src.start(spkNext); spkNext += buf.duration;
   }
   function onA() { /* during calibration the page reads the A press itself */ }
   function sendRaw(obj) {
@@ -494,9 +558,9 @@ button,select,input{touch-action:manipulation}
     var g = grip(), b = {};
     for (var k in btn) if (btn[k]) b[k] = true;
     if (ROLE === 'nunchuk')
-      return { t: 'pad', v: 2, sig: SIG, seq: ++seq, role: 'nunchuk', want: WANT, b: b, x: stickXY.x, y: stickXY.y, acc: cfg.tilt && sensorsOn ? acc : null };
+      return { t: 'pad', v: 2, sig: SIG, seq: ++seq, role: 'nunchuk', want: WANT, id: PID, b: b, x: stickXY.x, y: stickXY.y, acc: cfg.tilt && sensorsOn ? acc : null };
     return {
-      t: 'pad', v: 2, sig: SIG, seq: ++seq, role: 'remote', want: WANT, b: b, x: stickXY.x, y: stickXY.y,
+      t: 'pad', v: 2, sig: SIG, seq: ++seq, role: 'remote', want: WANT, id: PID, spk: cfg.spk && !!actx ? 1 : 0, b: b, x: stickXY.x, y: stickXY.y,
       p: g, rc: recenterCount,
       ori: ori, acc: cfg.tilt ? acc : null, gyro: (cfg.mp && sensorsOn) ? gyro : null, mp: cfg.mp && sensorsOn
     };
@@ -549,6 +613,7 @@ button,select,input{touch-action:manipulation}
   /* ---------- start ---------- */
   var wakeLock = null;
   $('#go').onclick = function () {
+    audioUnlock();  /* speaker audio needs a tap to start */
     /* iOS: both permission prompts must be requested inside this tap */
     var asks = [];
     try { if (typeof DeviceMotionEvent !== 'undefined' && DeviceMotionEvent.requestPermission) asks.push(DeviceMotionEvent.requestPermission()); } catch (e) {}
@@ -564,6 +629,7 @@ button,select,input{touch-action:manipulation}
       $('#start').hidden = true; layout(); $('#sensTxt').hidden = false;
     });
   };
+  if (IOS) $('#iosNote').hidden = false;
   applyRole();
   layout();
   connect();

@@ -984,6 +984,11 @@ async function handleMessage(type, payload) {
     case "setWiimoteConnected":
       api?.setWiimoteConnected?.(payload);
       return {};
+    case "aemlSpeakerToPhone":
+      if (typeof moduleInstance?._AemlSetSpeakerToPhone === "function") moduleInstance._AemlSetSpeakerToPhone(payload.mask | 0);
+      return {};
+    case "aemlOutputs":
+      return aemlReadOutputs(payload.mask | 0);
     case "aemlWiimoteSelfTest":
       return { result: api?.aemlWiimoteSelfTest ? api.aemlWiimoteSelfTest() : "unsupported" };
     case "setInputState":
@@ -14181,4 +14186,28 @@ function startFrameRingDrainLoop() {
 
 function formatHex(value) {
   return `0x${Math.trunc(value).toString(16).toUpperCase()}`;
+}
+
+/* AEML, NTUST: Wii Remote outputs for the browser page -- rumble bits and the
+ * speaker audio queued for remotes whose phone plays it (mask bit n = remote n). */
+let aemlSpeakerScratch = 0;
+const AEML_SPEAKER_MAX = 8192;
+function aemlReadOutputs(mask) {
+  const m = moduleInstance;
+  if (!m || typeof m._AemlGetRumble !== "function") return { rumble: 0, audio: [], supported: false };
+  const out = { rumble: m._AemlGetRumble() | 0, audio: [], supported: true };
+  if (mask && typeof m._AemlTakeSpeaker === "function") {
+    if (!aemlSpeakerScratch) aemlSpeakerScratch = m._malloc(AEML_SPEAKER_MAX * 2 + 8);
+    const ratePtr = aemlSpeakerScratch + AEML_SPEAKER_MAX * 2;
+    for (let i = 0; i < 4; i++) {
+      if (!((mask >> i) & 1)) continue;
+      const n = m._AemlTakeSpeaker(i, aemlSpeakerScratch, AEML_SPEAKER_MAX, ratePtr);
+      if (n > 0) {
+        const heap = m.HEAPU8.buffer;
+        const rate = new Int32Array(heap, ratePtr, 1)[0];
+        out.audio.push({ p: i, rate, pcm: new Int16Array(heap, aemlSpeakerScratch, n).slice() });
+      }
+    }
+  }
+  return out;
 }
