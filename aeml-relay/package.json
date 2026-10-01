@@ -1,0 +1,7 @@
+{
+  "name": "aeml-wii-relay",
+  "private": true,
+  "description": "AEML, NTUST - relay between the Wii emulator page and phone controllers",
+  "scripts": { "deploy": "wrangler deploy", "dev": "wrangler dev" },
+  "devDependencies": { "wrangler": "^4" }
+}

@@ -59,7 +59,7 @@ button,select,input{touch-action:manipulation}
 <div id="banner" hidden></div>
 <div id="link"><div class="lk"><div id="linkTxt"></div><div class="lkSub"><span class="zh">電腦頁面需保持開啟、勾選「藍牙／手機連結」</span><span class="en">Keep the emulator page open with Bluetooth / Phone checked</span></div></div></div>
 <div id="pad"></div>
-<div id="wm">v1.9 · <span id="aimTxt"></span> <span id="sensTxt" hidden><span class="zh">感測器未啟用</span><span class="en">sensors off</span></span> · AEML, NTUST</div>
+<div id="wm">v2.0 · <span id="aimTxt"></span> <span id="sensTxt" hidden><span class="zh">感測器未啟用</span><span class="en">sensors off</span></span> · AEML, NTUST</div>
 
 <!-- start sheet: one tap to unlock sensors, fullscreen and wake lock -->
 <div class="sheet" id="start">
@@ -101,6 +101,9 @@ button,select,input{touch-action:manipulation}
  <span data-m="relayok"><span class="zh">已連線（網路中繼，反應稍慢）</span><span class="en">Connected (relay, a bit slower)</span></span>
  <span data-m="relaynoack"><span class="zh">中繼伺服器已連上，但電腦頁面沒有回應。請確認電腦頁面已更新為 v1.9（「藍牙／手機連結」區塊會顯示「網路中繼：待命中 ✓」），再重新掃描 QR code。</span><span class="en">Relay server reached, but the emulator page does not answer. Make sure it is updated to v1.9 (it shows "Network relay: ready ✓"), then scan the QR code again.</span></span>
  <span data-m="relayfail"><span class="zh">手機連不到中繼伺服器（0.peerjs.com），可能被這個網路擋住。可改用手機行動網路試試。</span><span class="en">The phone cannot reach the relay server (0.peerjs.com); this network may block it. Try mobile data.</span></span>
+ <span data-m="cfok"><span class="zh">已連線（雲端中繼）</span><span class="en">Connected (cloud relay)</span></span>
+ <span data-m="cfnohost"><span class="zh">已連上雲端中繼，等待電腦頁面…（請確認電腦頁面開著並勾選「藍牙／手機連結」）</span><span class="en">On the cloud relay, waiting for the emulator page… (keep it open with Bluetooth / Phone checked)</span></span>
+ <span data-m="cffail"><span class="zh">連不上雲端中繼，請確認網路後重試。</span><span class="en">Cannot reach the cloud relay; check the network.</span></span>
  <span data-m="nolib"><span class="zh">GitHub 上缺少 peerjs.min.js，請上傳後重新整理。</span><span class="en">peerjs.min.js is missing on GitHub; upload it and reload.</span></span>
  <span data-m="centered"><span class="zh">已置中</span><span class="en">Centered</span></span>
 </div>
@@ -286,10 +289,35 @@ button,select,input{touch-action:manipulation}
   var relay = null, relayOk = false, relayTimer = 0, mode = '';
   var HOST_RELAY = 'aemlwii-' + code + '-r';
   function linkState(key, cls, extra) { st(key, cls, extra); var o = $('#link'); o.hidden = cls === 'ok'; if (!o.hidden) { var lt = $('#linkTxt'); lt.textContent = ''; Array.prototype.forEach.call($('#st').childNodes, function (n) { lt.appendChild(n.cloneNode(true)); }); } }
-  function connect() {
+  /* ---- own Cloudflare relay (&r=): one WebSocket, works on any network ---- */
+  var CF = (q.get('r') || '').replace(/\/+$/, ''), cf = null, cfUp = false, cfHost = false;
+  if (CF && !/^https:\/\//.test(CF) && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(CF)) CF = '';
+  function cfConnect() {
     clearTimeout(retryTimer);
     if (!/^[A-Z0-9]{6}$/.test(code)) { linkState('nocode', ''); return; }
-    if (!window.Peer) { linkState('nolib', ''); return; }
+    linkState('connecting', 'wait', code);
+    var opened = false;
+    try { cf = new WebSocket(CF.replace(/^http/, 'ws') + '/ws?room=' + code + '&role=pad'); } catch (e) { linkState('cffail', 'wait'); return; }
+    cf.onopen = function () { opened = true; cfUp = true; };
+    cf.onmessage = function (ev) {
+      if (ev.data === 'pong') return;
+      var m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+      if (m.t === 'hello' || m.t === 'host') {
+        cfHost = m.t === 'hello' ? !!m.host : !!m.up;
+        if (cfHost) { linkOk = true; dirty = true; linkState('cfok', 'ok'); } else { linkOk = false; linkState('cfnohost', 'wait'); }
+      } else if (m.t === 'data') onData(m.d);
+    };
+    cf.onclose = function () {
+      cfUp = false; cfHost = false; linkOk = false;
+      linkState(opened ? 'lost' : 'cffail', 'wait');
+      retryTimer = setTimeout(cfConnect, opened ? 1500 : 4000);
+    };
+  }
+  function connect() {
+    if (CF) { cfConnect(); return; }
+    clearTimeout(retryTimer);
+    if (!/^[A-Z0-9]{6}$/.test(code)) { linkState('nocode', ''); return; }
+    if (!window.Peer) { linkState('nolib', ''); return; }  /* (not used in cloud-relay mode) */
     linkState('connecting', 'wait', code);
     try { if (peer) peer.destroy(); } catch (e) {}
     linkOk = false;
@@ -363,6 +391,7 @@ button,select,input{touch-action:manipulation}
   }
   function onA() { /* during calibration the page reads the A press itself */ }
   function sendRaw(obj) {
+    if (CF) { if (cf && cf.readyState === 1 && cfHost) { cf.send(JSON.stringify(obj)); return true; } return false; }
     if (conn && conn.open) { try { conn.send(obj); return true; } catch (e) {} }
     if (relay && relayOk) return relay.send(HOST_RELAY, obj);
     return false;
@@ -387,16 +416,20 @@ button,select,input{touch-action:manipulation}
   }
   function send() { if (sendRaw(packet())) { lastSend = Date.now(); dirty = false; } }
   (function loop() {
-    var now = Date.now(), direct = conn && conn.open;
-    if (direct || relayOk) {
-      var minGap = direct ? 0 : 50, keep = direct ? 250 : 1000;   /* relay: max 20/s */
+    var now = Date.now(), direct = conn && conn.open, viaCf = CF && cfHost && cf && cf.readyState === 1;
+    if (direct || relayOk || viaCf) {
+      var minGap = direct ? 0 : (viaCf ? 33 : 50), keep = direct ? 250 : 1000;   /* cloud relay: max 30/s */
       if ((dirty && now - lastSend >= minGap) || now - lastSend > keep) send();
     }
     if (ori) $('#aimTxt').textContent = Math.round(wrapDeg(ori.yaw)) + '° / ' + Math.round(ori.pitch) + '°';
     requestAnimationFrame(loop);
   })();
   function wrapDeg(d) { return ((d + 180) % 360 + 360) % 360 - 180; }
-  document.addEventListener('visibilitychange', function () { if (!document.hidden && !(conn && conn.open) && !relayOk) connect(); });
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) return;
+    if (CF) { if (!cf || cf.readyState > 1) cfConnect(); return; }
+    if (!(conn && conn.open) && !relayOk) connect();
+  });
 
   /* ---------- no zooming (iOS ignores user-scalable=no) ---------- */
   ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (t) {
