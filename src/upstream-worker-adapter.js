@@ -453,6 +453,8 @@ export class UpstreamWorkerAdapter {
     }
     this.applyMetadata(response);
     this.loaded = true;
+    this.lastWiimoteSignatures = [];
+    this.wiimoteConnected = [];
   }
 
   async mountGame(file) {
@@ -526,8 +528,10 @@ export class UpstreamWorkerAdapter {
       return;
     }
     const n = (v, lo, hi) => (Number.isFinite(+v) ? Math.max(lo, Math.min(hi, +v)) : 0);
+    const slot = Math.max(0, Math.min(3, state.slot | 0));
     const next = {
-      buttons: (state.buttons >>> 0) & 0x3fff,
+      slot,
+      buttons: (state.buttons >>> 0) & 0x7fff,
       extension: state.extension === 1 ? 1 : 0,
       stickX: n(state.stickX, -1, 1),
       stickY: n(state.stickY, -1, 1),
@@ -540,14 +544,33 @@ export class UpstreamWorkerAdapter {
       gyroX: n(state.gyroX, -35, 35),
       gyroY: n(state.gyroY, -35, 35),
       gyroZ: n(state.gyroZ, -35, 35),
-      motionPlus: state.motionPlus ? 1 : 0
+      motionPlus: state.motionPlus ? 1 : 0,
+      nunchukAccel: state.nunchukAccel ? 1 : 0,
+      naccX: n(state.naccX, -8, 8),
+      naccY: n(state.naccY, -8, 8),
+      naccZ: state.naccZ === undefined ? 1 : n(state.naccZ, -8, 8)
     };
     const signature = JSON.stringify(next);
-    if (signature === this.lastWiimoteSignature) {
+    this.lastWiimoteSignatures = this.lastWiimoteSignatures || [];
+    if (signature === this.lastWiimoteSignatures[slot]) {
       return;
     }
-    this.lastWiimoteSignature = signature;
+    this.lastWiimoteSignatures[slot] = signature;
     this.post("setWiimoteState", next);
+  }
+
+  // AEML, NTUST: connect (true) or disconnect (false) Wii Remote 2-4 (slot 1-3).
+  setWiimoteConnected(slot, connected) {
+    if (!this.loaded) {
+      return;
+    }
+    slot = slot | 0;
+    if (slot < 1 || slot > 3) return;
+    this.wiimoteConnected = this.wiimoteConnected || [];
+    if (this.wiimoteConnected[slot] === !!connected) return;
+    this.wiimoteConnected[slot] = !!connected;
+    if (!connected && this.lastWiimoteSignatures) this.lastWiimoteSignatures[slot] = null;
+    this.post("setWiimoteConnected", { slot, connected: connected ? 1 : 0 });
   }
 
   setInputState(state) {

@@ -1,6 +1,6 @@
 <!doctype html>
 <!-- =====================================================================
-     AEML Wii phone controller  v1.0  —  (c) AEML, NTUST
+     AEML Wii phone controller  v2.2  —  (c) AEML, NTUST
      Opened on the phone from the QR code on the emulator page.
      Sends buttons, aim (orientation), accelerometer and gyroscope
      (MotionPlus) to the emulator page over a WebRTC data channel.
@@ -38,7 +38,25 @@ body.en .zh{display:none!important} body:not(.en) .en{display:none!important}
 .sheet label{display:flex;align-items:center;gap:8px;font-size:16px}
 .sheet select{font:inherit;padding:8px;border-radius:8px;background:var(--panel);color:var(--txt);border:1px solid var(--line)}
 /* controller */
-#pad{position:fixed;left:0;right:0;bottom:0;top:calc(40px + env(safe-area-inset-top));padding:8px 10px calc(18px + env(safe-area-inset-bottom))}
+#pad{position:fixed;left:0;right:0;bottom:0;top:calc(78px + env(safe-area-inset-top));padding:8px 10px calc(18px + env(safe-area-inset-bottom))}
+/* who am I: role + player strip under the top bar (v2.2) */
+#who{position:fixed;left:0;right:0;top:calc(40px + env(safe-area-inset-top));height:38px;display:flex;align-items:center;justify-content:center;gap:10px;
+  font-size:18px;font-weight:800;letter-spacing:1px;z-index:3;background:#13202e;border-bottom:2px solid var(--pc)}
+#who .pn{min-width:46px;text-align:center;border-radius:8px;padding:1px 8px;color:#06121a;background:var(--pc)}
+#who.none .pn{background:#3a4f66;color:var(--txt)}
+#leds{display:inline-flex;gap:4px;flex:none}
+#leds i{width:9px;height:9px;border-radius:2px;background:#26323f;display:block}
+#leds i.on{background:var(--pc);box-shadow:0 0 6px var(--pc)}
+body{--pc:#38bdf8}
+body.p2{--pc:#f87171} body.p3{--pc:#4ade80} body.p4{--pc:#facc15}
+/* Nunchuk phone: its own look so it is never mistaken for the Wii Remote */
+body.nun{--bg:#1c1030;--panel:#2a1846;--line:#6b4a9a;--acc:#c084fc;--acc2:#f0abfc}
+body.nun #top{background:#150a26;border-bottom-color:#3b2560}
+body.nun #who{background:#2a1846}
+body.nun #pad{background:repeating-linear-gradient(135deg,rgba(192,132,252,.05) 0 14px,transparent 14px 28px)}
+body.nun .b{background:#3b2160;border-color:#8b5cf6;border-radius:18px}
+body.nun .stick{background:radial-gradient(#3b2160,#1c1030);border-color:#8b5cf6}
+body.nun #wm{color:rgba(240,171,252,.6)}
 button,select,input{touch-action:manipulation}
 .b{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:50%;background:#243345;border:2px solid var(--line);color:var(--txt);font-weight:800;font-size:22px;touch-action:none}
 .b small{font-size:11px;font-weight:400;color:var(--mut)}
@@ -56,15 +74,17 @@ button,select,input{touch-action:manipulation}
  <button id="bCalib" type="button"><span class="zh">校正</span><span class="en">Calibrate</span></button>
  <button id="bSet" type="button">⚙</button>
 </div>
+<div id="who" class="none"><span id="whoRole"></span><span class="pn" id="whoP">P?</span><span id="leds"><i></i><i></i><i></i><i></i></span></div>
 <div id="banner" hidden></div>
 <div id="link"><div class="lk"><div id="linkTxt"></div><div class="lkSub"><span class="zh">電腦頁面需保持開啟、勾選「藍牙／手機連結」</span><span class="en">Keep the emulator page open with Bluetooth / Phone checked</span></div></div></div>
 <div id="pad"></div>
-<div id="wm">v2.0 · <span id="aimTxt"></span> <span id="sensTxt" hidden><span class="zh">感測器未啟用</span><span class="en">sensors off</span></span> · AEML, NTUST</div>
+<div id="wm">v2.2 · <span id="roleTxt"></span> <span id="aimTxt"></span> <span id="sensTxt" hidden><span class="zh">感測器未啟用</span><span class="en">sensors off</span></span> · AEML, NTUST</div>
 
 <!-- start sheet: one tap to unlock sensors, fullscreen and wake lock -->
 <div class="sheet" id="start">
  <h1><span class="zh">Wii 手機搖桿</span><span class="en">Wii phone controller</span></h1>
- <p><span class="zh">像拿 Wii 遙控器一樣握住手機：螢幕朝上、手機頂端對準電腦畫面。</span><span class="en">Hold the phone like a Wii Remote: screen up, top edge pointing at the computer screen.</span></p>
+ <p id="hintRem"><span class="zh">像拿 Wii 遙控器一樣握住手機：螢幕朝上、手機頂端對準電腦畫面。</span><span class="en">Hold the phone like a Wii Remote: screen up, top edge pointing at the computer screen.</span></p>
+ <p id="hintNun" hidden><span class="zh">🥢 雙節棍模式：左手握住手機，螢幕朝上、頂端朝向電腦畫面，拇指操作搖桿；揮動手機＝揮動雙節棍。</span><span class="en">Nunchuk mode: hold the phone in your left hand, screen up, top edge toward the screen; thumb on the stick; swing the phone to swing the Nunchuk.</span></p>
  <button class="big" id="go" type="button"><span class="zh">開始</span><span class="en">Start</span></button>
  <p id="startMsg"></p>
  <p style="font-size:12px">AEML, NTUST</p>
@@ -80,6 +100,10 @@ button,select,input{touch-action:manipulation}
    <option value="sideways">橫握 / Sideways</option>
    <option value="nunchuk">直握＋雙節棍 / With Nunchuk</option>
   </select></label>
+ <label><span class="zh">這支手機當</span><span class="en">This phone is the</span>
+  <select id="sRole"><option value="remote">Wii 遙控器 / Wii Remote</option><option value="nunchuk">雙節棍 / Nunchuk</option></select></label>
+ <label><span class="zh">玩家</span><span class="en">Player</span>
+  <select id="sWant"><option value="0">自動分配 / Auto</option><option value="1">P1</option><option value="2">P2</option><option value="3">P3</option><option value="4">P4</option></select></label>
  <label><input type="checkbox" id="sMp" checked> <span class="zh">MotionPlus（陀螺儀）</span><span class="en">MotionPlus (gyroscope)</span></label>
  <label><input type="checkbox" id="sTilt" checked> <span class="zh">體感傾斜／揮動</span><span class="en">Tilt and swing</span></label>
  <label><input type="checkbox" id="sVib" checked> <span class="zh">按鍵震動</span><span class="en">Vibrate on press</span></label>
@@ -105,7 +129,13 @@ button,select,input{touch-action:manipulation}
  <span data-m="cfnohost"><span class="zh">已連上雲端中繼，等待電腦頁面…（請確認電腦頁面開著並勾選「藍牙／手機連結」）</span><span class="en">On the cloud relay, waiting for the emulator page… (keep it open with Bluetooth / Phone checked)</span></span>
  <span data-m="cffail"><span class="zh">連不上雲端中繼，請確認網路後重試。</span><span class="en">Cannot reach the cloud relay; check the network.</span></span>
  <span data-m="nolib"><span class="zh">GitHub 上缺少 peerjs.min.js，請上傳後重新整理。</span><span class="en">peerjs.min.js is missing on GitHub; upload it and reload.</span></span>
+ <span data-m="isnun"><span class="zh">雙節棍 ·</span><span class="en">Nunchuk ·</span></span>
+ <span data-m="isrem"><span class="zh">遙控器 ·</span><span class="en">Remote ·</span></span>
  <span data-m="centered"><span class="zh">已置中</span><span class="en">Centered</span></span>
+ <span data-m="whorem"><span class="zh">🎮 Wii 遙控器</span><span class="en">🎮 Wii Remote</span></span>
+ <span data-m="whonun"><span class="zh">🥢 雙節棍</span><span class="en">🥢 Nunchuk</span></span>
+ <span data-m="plfull"><span class="zh">已有 4 位玩家，這支手機暫時沒有分配（可在 ⚙ 改當雙節棍）</span><span class="en">4 players already; this phone is not assigned (⚙ can make it a Nunchuk)</span></span>
+ <span data-m="plis"><span class="zh">你是玩家 </span><span class="en">You are player </span></span>
 </div>
 
 <script src="./peerjs.min.js"></script>
@@ -127,10 +157,13 @@ button,select,input{touch-action:manipulation}
   }
 
   /* ---------- settings ---------- */
+  var ROLE = (q.get('role') === 'nunchuk' || ls('role') === 'nunchuk' && q.get('role') !== 'remote') ? 'nunchuk' : 'remote';
   var cfg = { grip: ls('grip') || 'auto', mp: ls('mp') !== '0', tilt: ls('tilt') !== '0', vib: ls('vib') !== '0' };
-  $('#sGrip').value = cfg.grip; $('#sMp').checked = cfg.mp; $('#sTilt').checked = cfg.tilt; $('#sVib').checked = cfg.vib;
+  var WANT = 0, PLAYER = 0, NPHONES = 1;  /* WANT: player chosen by hand (0 = auto); PLAYER: given by the emulator page */
+  $('#sGrip').value = cfg.grip; $('#sRole').value = ROLE; $('#sMp').checked = cfg.mp; $('#sTilt').checked = cfg.tilt; $('#sVib').checked = cfg.vib;
   $('#bSet').onclick = function () { $('#settings').hidden = false; };
   $('#sDone').onclick = function () {
+    ROLE = $('#sRole').value; ls('role', ROLE); WANT = +$('#sWant').value || 0; applyRole();
     cfg.grip = $('#sGrip').value; cfg.mp = $('#sMp').checked; cfg.tilt = $('#sTilt').checked; cfg.vib = $('#sVib').checked;
     ls('grip', cfg.grip); ls('mp', cfg.mp ? '1' : '0'); ls('tilt', cfg.tilt ? '1' : '0'); ls('vib', cfg.vib ? '1' : '0');
     $('#settings').hidden = true; layout(); dirty = true;
@@ -139,10 +172,15 @@ button,select,input{touch-action:manipulation}
   /* ---------- controller layouts (percent of the pad area) ---------- */
   var btn = {}, stickXY = { x: 0, y: 0 }, recenterCount = 0, calibStep = -1;
   function grip() {
+    if (ROLE === 'nunchuk') return 'nunchukpad';
     if (cfg.grip !== 'auto') return cfg.grip;
     return (window.innerWidth > window.innerHeight) ? 'sideways' : 'upright';
   }
   var LAYOUTS = {
+    nunchukpad: [ // second phone held in the left hand like a Nunchuk: stick on top, C and Z under the thumb
+      ['C', 30, 66, 22, 'C'], ['Z', 70, 66, 30, 'Z', 1],
+      ['NSHAKE', 50, 90, 18, '〰']
+    ],
     upright: [ // portrait, like a Wii Remote
       ['UP', 50, 9, 16, '▲', 1], ['LEFT', 31, 20, 16, '◀', 1], ['RIGHT', 69, 20, 16, '▶', 1], ['DOWN', 50, 31, 16, '▼', 1],
       ['A', 50, 50, 30, 'A'], ['B', 86, 50, 20, 'B', 0, 'trig'],
@@ -184,6 +222,7 @@ button,select,input{touch-action:manipulation}
       ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (ev) { el.addEventListener(ev, function () { set(false); }); });
     });
     if (g === 'nunchuk') addStick(pad, 25 / 100 * W, 50 / 100 * H, Math.min(W * 0.46, H * 0.42));
+    if (g === 'nunchukpad') addStick(pad, 50 / 100 * W, 28 / 100 * H, Math.min(W * 0.8, H * 0.46));
   }
   function addStick(pad, cx, cy, size) {
     var s = document.createElement('div'); s.className = 'stick';
@@ -195,12 +234,48 @@ button,select,input{touch-action:manipulation}
       var dx = (e.clientX - r.left - R) / R, dy = (e.clientY - r.top - R) / R, m = Math.hypot(dx, dy);
       if (m > 1) { dx /= m; dy /= m; }
       k.style.transform = 'translate(calc(-50% + ' + dx * R * 0.6 + 'px), calc(-50% + ' + dy * R * 0.6 + 'px))';
+      var m2 = Math.hypot(dx, dy);
+      if (m2 < 0.12) { dx = 0; dy = 0; } else { var sc = (m2 - 0.12) / (0.88 * m2); dx *= sc; dy *= sc; }
       stickXY = { x: dx, y: dy }; dirty = true;
     }
     s.addEventListener('pointerdown', function (e) { e.preventDefault(); id = e.pointerId; s.setPointerCapture(id); mv(e); });
     s.addEventListener('pointermove', function (e) { if (e.pointerId === id) mv(e); });
     function end() { id = null; k.style.transform = 'translate(-50%,-50%)'; stickXY = { x: 0, y: 0 }; dirty = true; }
     s.addEventListener('pointerup', end); s.addEventListener('pointercancel', end);
+  }
+  function paintWho() {
+    var nun = ROLE === 'nunchuk';
+    var t = document.querySelector('#msgs [data-m="' + (nun ? 'whonun' : 'whorem') + '"]');
+    $('#whoRole').textContent = ''; if (t) $('#whoRole').appendChild(t.cloneNode(true));
+    $('#whoP').textContent = PLAYER > 0 ? 'P' + PLAYER : 'P?';
+    $('#who').className = PLAYER > 0 ? '' : 'none';
+    document.body.classList.remove('p1', 'p2', 'p3', 'p4');
+    if (PLAYER > 0) document.body.classList.add('p' + PLAYER);
+    var leds = document.querySelectorAll('#leds i');
+    for (var i = 0; i < 4; i++) leds[i].className = (i + 1 === PLAYER) ? 'on' : '';
+    document.title = (PLAYER > 0 ? 'P' + PLAYER + ' ' : '') + (nun ? 'Nunchuk' : 'Wii Remote') + ' \u00b7 AEML, NTUST';
+  }
+  function setPlayer(n) {
+    n = n | 0; if (n < 0 || n > 4) n = 0;
+    var was = PLAYER; PLAYER = n; paintWho();
+    if (n > 0 && n !== was) {
+      var b = $('#banner'); b.textContent = '';
+      b.appendChild(document.querySelector('#msgs [data-m="plis"]').cloneNode(true));
+      b.appendChild(document.createTextNode('P' + n)); b.hidden = false;
+      setTimeout(function () { if (calibStep < 0) b.hidden = true; }, 1600);
+      if (cfg.vib && navigator.vibrate) { try { var pat = []; for (var v = 0; v < n; v++) pat.push(70, 90); pat.pop(); navigator.vibrate(pat); } catch (e) {} }
+    }
+  }
+  function applyRole() {
+    var nun = ROLE === 'nunchuk';
+    document.body.classList.toggle('nun', nun);
+    var mc = document.querySelector('meta[name="theme-color"]'); if (mc) mc.setAttribute('content', nun ? '#150a26' : '#0f1720');
+    paintWho();
+    $('#hintRem').hidden = nun; $('#hintNun').hidden = !nun;
+    $('#bRecenter').hidden = nun; $('#bCalib').hidden = nun;
+    var t = document.querySelector('#msgs [data-m="' + (nun ? 'isnun' : 'isrem') + '"]');
+    $('#roleTxt').textContent = ''; if (t) $('#roleTxt').appendChild(t.cloneNode(true));
+    dirty = true;
   }
   window.addEventListener('resize', function () { setTimeout(layout, 50); dirty = true; });
 
@@ -209,12 +284,15 @@ button,select,input{touch-action:manipulation}
    * Phone held like a remote (top edge = IR end, screen = buttons) is that frame
    * turned 180 degrees about z:  wii = (-phone.x, -phone.y, +phone.z). */
   var IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  var acc = { x: 0, y: 0, z: 1 }, gyro = { x: 0, y: 0, z: 0 }, ori = null, sensorsOn = false;
+  var accPeak = null, acc = { x: 0, y: 0, z: 1 }, gyro = { x: 0, y: 0, z: 0 }, ori = null, sensorsOn = false;
   function onMotion(e) {
     var a = e.accelerationIncludingGravity, r = e.rotationRate;
     if (a && a.x !== null) {
       var s = IOS ? -1 : 1;                      /* iOS reports the opposite sign */
       acc = { x: -s * a.x / 9.81, y: -s * a.y / 9.81, z: s * a.z / 9.81 };
+      /* keep the strongest reading between two sends, so short punches/swings are not lost */
+      var dev = Math.abs(Math.hypot(acc.x, acc.y, acc.z) - 1);
+      if (!accPeak || dev > accPeak.dev) accPeak = { x: acc.x, y: acc.y, z: acc.z, dev: dev };
     }
     if (r && r.alpha !== null) {
       var d = Math.PI / 180;                     /* deg/s -> rad/s */
@@ -304,11 +382,11 @@ button,select,input{touch-action:manipulation}
       var m; try { m = JSON.parse(ev.data); } catch (e) { return; }
       if (m.t === 'hello' || m.t === 'host') {
         cfHost = m.t === 'hello' ? !!m.host : !!m.up;
-        if (cfHost) { linkOk = true; dirty = true; linkState('cfok', 'ok'); } else { linkOk = false; linkState('cfnohost', 'wait'); }
+        if (cfHost) { linkOk = true; dirty = true; linkState('cfok', 'ok'); } else { linkOk = false; setPlayer(0); linkState('cfnohost', 'wait'); }
       } else if (m.t === 'data') onData(m.d);
     };
     cf.onclose = function () {
-      cfUp = false; cfHost = false; linkOk = false;
+      cfUp = false; cfHost = false; linkOk = false; setPlayer(0);
       linkState(opened ? 'lost' : 'cffail', 'wait');
       retryTimer = setTimeout(cfConnect, opened ? 1500 : 4000);
     };
@@ -387,6 +465,13 @@ button,select,input{touch-action:manipulation}
         b.appendChild(document.createTextNode('  (' + (d.step + 1) + '/' + d.total + ')')); b.hidden = false;
       } else { b.hidden = true; }
     }
+    if (d.t === 'player') {
+      if (typeof d.np === 'number') NPHONES = d.np;
+      if (d.role === (ROLE === 'nunchuk' ? 'nunchuk' : 'remote')) {
+        setPlayer(d.n);
+        if (!(d.n > 0)) { var fb = $('#banner'); fb.textContent = ''; fb.appendChild(document.querySelector('#msgs [data-m="plfull"]').cloneNode(true)); fb.hidden = false; }
+      }
+    }
     if (d.t === 'rumble' && cfg.vib && navigator.vibrate) { try { navigator.vibrate(d.on ? 200 : 0); } catch (e) {} }
   }
   function onA() { /* during calibration the page reads the A press itself */ }
@@ -408,17 +493,23 @@ button,select,input{touch-action:manipulation}
   function packet() {
     var g = grip(), b = {};
     for (var k in btn) if (btn[k]) b[k] = true;
+    if (ROLE === 'nunchuk')
+      return { t: 'pad', v: 2, sig: SIG, seq: ++seq, role: 'nunchuk', want: WANT, b: b, x: stickXY.x, y: stickXY.y, acc: cfg.tilt && sensorsOn ? acc : null };
     return {
-      t: 'pad', v: 2, sig: SIG, seq: ++seq, b: b, x: stickXY.x, y: stickXY.y,
+      t: 'pad', v: 2, sig: SIG, seq: ++seq, role: 'remote', want: WANT, b: b, x: stickXY.x, y: stickXY.y,
       p: g, rc: recenterCount,
       ori: ori, acc: cfg.tilt ? acc : null, gyro: (cfg.mp && sensorsOn) ? gyro : null, mp: cfg.mp && sensorsOn
     };
   }
-  function send() { if (sendRaw(packet())) { lastSend = Date.now(); dirty = false; } }
+  function send() {
+    var pk = packet();
+    if (pk.acc && accPeak) pk.acc = { x: accPeak.x, y: accPeak.y, z: accPeak.z };
+    if (sendRaw(pk)) { lastSend = Date.now(); dirty = false; accPeak = null; }
+  }
   (function loop() {
     var now = Date.now(), direct = conn && conn.open, viaCf = CF && cfHost && cf && cf.readyState === 1;
     if (direct || relayOk || viaCf) {
-      var minGap = direct ? 0 : (viaCf ? 33 : 50), keep = direct ? 250 : 1000;   /* cloud relay: max 30/s */
+      var minGap = direct ? 0 : (viaCf ? (NPHONES >= 3 ? 50 : 33) : 50), keep = direct ? 250 : 1000;   /* cloud relay: max 30/s (20/s with 3+ phones) */
       if ((dirty && now - lastSend >= minGap) || now - lastSend > keep) send();
     }
     if (ori) $('#aimTxt').textContent = Math.round(wrapDeg(ori.yaw)) + '° / ' + Math.round(ori.pitch) + '°';
@@ -473,6 +564,8 @@ button,select,input{touch-action:manipulation}
       $('#start').hidden = true; layout(); $('#sensTxt').hidden = false;
     });
   };
+  applyRole();
+  layout();
   connect();
   console.log('%cAEML, NTUST - Wii phone controller', 'color:#22c3ee;font-weight:bold');
 })();

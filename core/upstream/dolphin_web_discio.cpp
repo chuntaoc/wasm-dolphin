@@ -857,10 +857,13 @@ struct DolphinWebWiimoteState
   float accel_x, accel_y, accel_z;
   float gyro_x, gyro_y, gyro_z;
   std::int32_t flags;
+  float nacc_x, nacc_y, nacc_z;
 };
 static std::mutex s_wiimote_mutex;
-static DolphinWebWiimoteState s_wiimote{0, 0, 0.f, 0.f, 0.f, 0.f, 1, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0};
-static bool s_wiimote_active = false;
+static constexpr int WEB_WIIMOTES = 4;
+static DolphinWebWiimoteState s_wiimote[WEB_WIIMOTES] = {};
+static bool s_wiimote_active[WEB_WIIMOTES] = {};
+static std::atomic<int> s_wiimote_wanted[WEB_WIIMOTES] = {1, 0, 0, 0};  // remote 1 is always connected
 
 static float ClampUnit(float v, float lo, float hi)
 {
@@ -870,12 +873,15 @@ static float ClampUnit(float v, float lo, float hi)
 #ifdef __EMSCRIPTEN__
 EMSCRIPTEN_KEEPALIVE
 #endif
-void SetWiimoteState(std::uint32_t buttons, int extension, float stick_x, float stick_y,
+void SetWiimoteState(int slot, std::uint32_t buttons, int extension, float stick_x, float stick_y,
                      float ir_x, float ir_y, int ir_visible, float accel_x, float accel_y,
-                     float accel_z, float gyro_x, float gyro_y, float gyro_z, int flags)
+                     float accel_z, float gyro_x, float gyro_y, float gyro_z, int flags,
+                     float nacc_x, float nacc_y, float nacc_z)
 {
+  if (slot < 0 || slot >= WEB_WIIMOTES)
+    return;
   DolphinWebWiimoteState next;
-  next.buttons = buttons & 0x3fffu;
+  next.buttons = buttons & 0x7fffu;
   next.extension = extension == 1 ? 1 : 0;
   next.stick_x = ClampUnit(stick_x, -1.f, 1.f);
   next.stick_y = ClampUnit(stick_y, -1.f, 1.f);
@@ -889,20 +895,47 @@ void SetWiimoteState(std::uint32_t buttons, int extension, float stick_x, float 
   next.gyro_x = ClampUnit(gyro_x, -35.f, 35.f);
   next.gyro_y = ClampUnit(gyro_y, -35.f, 35.f);
   next.gyro_z = ClampUnit(gyro_z, -35.f, 35.f);
-  next.flags = flags & 1;
+  next.flags = flags & 3;
+  next.nacc_x = ClampUnit(nacc_x, -8.f, 8.f);
+  next.nacc_y = ClampUnit(nacc_y, -8.f, 8.f);
+  next.nacc_z = ClampUnit(nacc_z, -8.f, 8.f);
   const std::lock_guard<std::mutex> lock(s_wiimote_mutex);
-  s_wiimote = next;
-  s_wiimote_active = true;
+  s_wiimote[slot] = next;
+  s_wiimote_active[slot] = true;
+}
+
+// Players 2-4: connect (1) or disconnect (0) that Wii Remote. Applied on the
+// emulator CPU thread by the Bluetooth update (see BTEmu.cpp).
+#ifdef __EMSCRIPTEN__
+EMSCRIPTEN_KEEPALIVE
+#endif
+void SetWiimoteConnected(int slot, int connected)
+{
+  if (slot < 1 || slot >= WEB_WIIMOTES)
+    return;
+  s_wiimote_wanted[slot].store(connected ? 1 : 0, std::memory_order_relaxed);
+  if (!connected)
+  {
+    const std::lock_guard<std::mutex> lock(s_wiimote_mutex);
+    s_wiimote_active[slot] = false;
+  }
+}
+
+int DolphinWeb_WiimoteWanted(int slot)
+{
+  if (slot < 0 || slot >= WEB_WIIMOTES)
+    return 0;
+  return s_wiimote_wanted[slot].load(std::memory_order_relaxed);
 }
 
 int DolphinWeb_GetWiimoteState(int index, DolphinWebWiimoteState* out)
 {
-  if (!out || index != 0)
+  if (!out || index < 0 || index >= WEB_WIIMOTES)
     return 0;
   const std::lock_guard<std::mutex> lock(s_wiimote_mutex);
-  if (!s_wiimote_active)
+  if (!s_wiimote_active[index])
     return 0;
-  *out = s_wiimote;
+  *out = s_wiimote[index];
   return 1;
 }
 

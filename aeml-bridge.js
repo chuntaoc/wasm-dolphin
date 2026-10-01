@@ -22,7 +22,7 @@ const ALLOWED_PARENTS = [
 const params = new URLSearchParams(location.search);
 const EMBED = params.get("embed") === "aeml" && window.parent !== window;
 const SIG = "AEML, NTUST";
-const BRIDGE_VER = "1.7";
+const BRIDGE_VER = "2.2";
 let parentOrigin = null;
 
 function allowed(origin) { return ALLOWED_PARENTS.some((re) => re.test(origin)); }
@@ -87,9 +87,61 @@ const MAP = { A: "A", B: "B", ONE: "X", TWO: "Y", PLUS: "START", MINUS: "Z",
   C: "L", Z: "R", SHAKE: "R", UP: "D_UP", DOWN: "D_DOWN", LEFT: "D_LEFT", RIGHT: "D_RIGHT" };
 /* Bit layout shared with SetWiimoteState() in the core (WiimoteEmu.cpp). */
 const WII_BITS = { UP: 1, DOWN: 2, LEFT: 4, RIGHT: 8, A: 16, B: 32, ONE: 64, TWO: 128,
-  PLUS: 256, MINUS: 512, HOME: 1024, C: 2048, Z: 4096, SHAKE: 8192 };
+  PLUS: 256, MINUS: 512, HOME: 1024, C: 2048, Z: 4096, SHAKE: 8192, NSHAKE: 16384 };
 function toByte(v) { v = Math.max(-1, Math.min(1, +v || 0)); return Math.round(0x80 + v * 0x7f) & 0xff; }
 let lastInput = null, lastInputSig = "";
+/* Players 2-4 (AEML, NTUST): each has its own emulated Wii Remote (slot 1-3).
+ * playersOn[n] says whether that remote should be connected to the console. */
+const lastPlayerInput = [null, null, null, null];
+const lastPlayerSig = ["", "", "", ""];
+let playersOn = [true, false, false, false];
+function applyPlayers(on) {
+  if (Array.isArray(on)) playersOn = [true, !!on[1], !!on[2], !!on[3]];
+  const a = window.__host && window.__host.adapter;
+  if (!a || typeof a.setWiimoteConnected !== "function") return;
+  for (let i = 1; i < 4; i++) a.setWiimoteConnected(i, playersOn[i]);
+}
+function applyPlayerInput(n, s) {
+  n = n | 0;
+  if (n <= 0) { applyInput(s); return; }
+  if (n > 3 || !s) return;
+  lastPlayerInput[n] = s;
+  if (diagOn) {
+    const pressed = Object.keys(s.buttons || {}).filter((k) => s.buttons[k]).join("+") || "-";
+    const st = s.stick || {};
+    const sig = pressed + "|" + (st.x || 0).toFixed(2) + "," + (st.y || 0).toFixed(2) + "|" + (s.ext || "");
+    if (sig !== lastPlayerSig[n]) {
+      lastPlayerSig[n] = sig;
+      diag("input", "P" + (n + 1) + " buttons=" + pressed + " stick=" + (st.x || 0).toFixed(2) + "," + (st.y || 0).toFixed(2) + " ext=" + (s.ext || "none"));
+      setTimeout(() => diagProbe("after P" + (n + 1) + " input"), 60);
+    }
+  }
+  sendWiimote(n, s);
+}
+function sendWiimote(slot, s) {
+  const host = window.__host;
+  const a = host && host.adapter;
+  if (!a || typeof a.setWiimoteState !== "function" || !s) return;
+  const b = s.buttons || {};
+  let bits = 0;
+  for (const k in WII_BITS) if (b[k] === true) bits |= WII_BITS[k];
+  const ir = s.ir || {}, acc = s.accel || {};
+  a.setWiimoteState({
+    slot,
+    buttons: bits,
+    extension: s.ext === "nunchuk" ? 1 : 0,
+    stickX: (s.stick && s.stick.x) || 0,
+    stickY: -((s.stick && s.stick.y) || 0),
+    irX: ir.x === undefined ? 0 : ir.x * 2 - 1,
+    irY: ir.y === undefined ? 0 : 1 - ir.y * 2,
+    irVisible: 1,
+    accelX: +acc.x || 0, accelY: +acc.y || 0, accelZ: acc.z === undefined ? 1 : +acc.z,
+    gyroX: (s.gyro && +s.gyro.x) || 0, gyroY: (s.gyro && +s.gyro.y) || 0, gyroZ: (s.gyro && +s.gyro.z) || 0,
+    motionPlus: !!s.motionPlus,
+    nunchukAccel: !!s.nacc,
+    naccX: (s.nacc && +s.nacc.x) || 0, naccY: (s.nacc && +s.nacc.y) || 0, naccZ: s.nacc ? +s.nacc.z : 1
+  });
+}
 function applyInput(s) {
   if (s) lastInput = s;
   if (diagOn && s) {
@@ -110,25 +162,8 @@ function applyInput(s) {
   const st = inputStateFromPressed(pressed);
   if (s.stick && (s.stick.x || s.stick.y)) { st.stickX = toByte(s.stick.x); st.stickY = toByte(-s.stick.y); }
   host.setInputState(st);
-  /* Wii Remote (core builds with SetWiimoteState; older cores ignore this). */
-  const a = host.adapter;
-  if (a && typeof a.setWiimoteState === "function") {
-    let bits = 0;
-    for (const k in WII_BITS) if (b[k] === true) bits |= WII_BITS[k];
-    const ir = s.ir || {}, acc = s.accel || {};
-    a.setWiimoteState({
-      buttons: bits,
-      extension: s.ext === "nunchuk" ? 1 : 0,
-      stickX: (s.stick && s.stick.x) || 0,
-      stickY: -((s.stick && s.stick.y) || 0),
-      irX: ir.x === undefined ? 0 : ir.x * 2 - 1,
-      irY: ir.y === undefined ? 0 : 1 - ir.y * 2,
-      irVisible: 1,
-      accelX: +acc.x || 0, accelY: +acc.y || 0, accelZ: acc.z === undefined ? 1 : +acc.z,
-      gyroX: (s.gyro && +s.gyro.x) || 0, gyroY: (s.gyro && +s.gyro.y) || 0, gyroZ: (s.gyro && +s.gyro.z) || 0,
-      motionPlus: !!s.motionPlus
-    });
-  }
+  /* Wii Remote 1 (core builds with SetWiimoteState; older cores ignore this). */
+  sendWiimote(0, s);
 }
 
 /* ---- diagnostics (AEML, NTUST) ----
@@ -168,7 +203,7 @@ function setDiag(on) {
   diag("diag", diagOn ? "diagnostic mode ON" : "diagnostic mode OFF");
   if (!diagOn) return;
   const a = window.__host && window.__host.adapter;
-  diag("diag", "core wiimote hook: " + (a && typeof a.setWiimoteState === "function" ? "yes" : "NO (old core)"));
+  diag("diag", "core wiimote hook: " + (a && typeof a.setWiimoteState === "function" ? "yes" : "NO (old core)") + " | 4 remotes: " + (a && typeof a.setWiimoteConnected === "function" ? "yes" : "no"));
   if (window.__host && window.__host.running && window.__host.mode === "dolphin") diagProbe("start");
   diagTimer = setInterval(() => {
     const st = diagStat();
@@ -290,6 +325,8 @@ async function loadGame(file) {
     " title=" + (host.game.name || file.name) + " size=" + file.size);
   /* give the new game the current controller state (Nunchuk, pointer, tilt) */
   applyInput(lastInput || { buttons: {}, stick: { x: 0, y: 0 }, ir: { x: 0.5, y: 0.5 }, accel: { x: 0, y: 0, z: 1 }, ext: "none" });
+  for (let i = 1; i < 4; i++) if (lastPlayerInput[i]) sendWiimote(i, lastPlayerInput[i]);
+  applyPlayers();
   setTimeout(() => {
     const mute = document.getElementById("muteButton");
     if (mute && /^muted$/i.test(mute.getAttribute("aria-label") || "")) askGesture();
@@ -326,7 +363,11 @@ if (EMBED) {
     const fail = (err) => { diag("ERROR", (d.cmd || "?") + ": " + String((err && err.message) || err)); post({ cmd: "error", id: d.id, message: String((err && err.message) || err) }); };
     switch (d.cmd) {
       case "hello": announce(); break;
-      case "input": applyInput(d.state); break;
+      case "input": if (d.player) applyPlayerInput(d.player, d.state); else applyInput(d.state); break;
+      case "players":
+        diag("input", "players connected: " + (d.on || []).map((v, i) => (v || !i) ? "P" + (i + 1) : "-").join(" "));
+        applyPlayers(d.on);
+        break;
       case "pick": showPicker(); break;
       case "load":
         post({ cmd: "ack", size: d.file && d.file.size });

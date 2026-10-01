@@ -1,5 +1,5 @@
 export const DEFAULT_UPSTREAM_CORE_URL = "./cores/dolphin/dolphin-core-upstream.js";
-export const DEFAULT_UPSTREAM_CORE_SHA256 = "418f2267aa6fb971a14d696300a4d906390216158c0bc6dbbef9cf3ab0801bcf"; // AEML, NTUST core with Wii Remote hook
+export const DEFAULT_UPSTREAM_CORE_SHA256 = "3fae45031fd9eb90cd100c9c5be179a6ce0f12bc67c97b7f95cacf1d7063e793"; // AEML, NTUST core with Wii Remote hook
 export const DISCIO_UPSTREAM_CORE_URL = "./cores/dolphin/dolphin-upstream.js";
 export const WORKERFS_MOUNT_DIR = "/workerfs";
 export const XFB_FAST_PATH_FLAGS = Object.freeze({
@@ -16,7 +16,8 @@ export const ONE_WAY_WORKER_REQUEST_TYPES = Object.freeze([
   "setAudioMuted",
   "setInputMask",
   "setInputState",
-  "setWiimoteState"
+  "setWiimoteState",
+  "setWiimoteConnected"
 ]);
 
 const ONE_WAY_WORKER_REQUEST_TYPE_SET = new Set(ONE_WAY_WORKER_REQUEST_TYPES);

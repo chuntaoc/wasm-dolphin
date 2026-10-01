@@ -27,6 +27,10 @@
 
 #include "Core/Boot/Boot.h"
 #include "Core/BootManager.h"
+#include "Core/Config/WiimoteSettings.h"
+#include "Core/IOS/USB/Bluetooth/WiimoteDevice.h"
+#include "Core/IOS/USB/Bluetooth/BTEmu.h"
+#include "Core/WiiUtils.h"
 #include "Core/Config/GraphicsSettings.h"
 #include "Core/Config/MainSettings.h"
 #include "Core/ConfigLoaders/BaseConfigLoader.h"
@@ -47,6 +51,7 @@
 #include "Core/HW/Wiimote.h"
 #include "Core/HW/WiimoteEmu/DesiredWiimoteState.h"
 #include "Core/HW/WiimoteEmu/WiimoteEmu.h"
+#include "Core/HW/WiimoteEmu/Extension/Nunchuk.h"
 #include "InputCommon/InputConfig.h"
 #include "InputCommon/ControllerInterface/ControllerInterface.h"
 
@@ -824,12 +829,12 @@ std::unique_ptr<GBAHostInterface> Host_CreateGBAHost(std::weak_ptr<HW::GBA::Core
 // AEML, NTUST: Wii Remote input self-test. Runs the same PrepareInput() call
 // the Wii Bluetooth stack makes every 5 ms and reports what the emulated
 // remote would send, so the browser hook can be verified without a game.
-static std::string AemlDescribeWiimote()
+static std::string AemlDescribeWiimote(int index)
 {
   InputConfig* config = Wiimote::GetConfig();
   if (!config || config->ControllersNeedToBeCreated())
     return "not-initialized";
-  auto* wiimote = static_cast<WiimoteEmu::Wiimote*>(config->GetController(0));
+  auto* wiimote = static_cast<WiimoteEmu::Wiimote*>(config->GetController(index));
   if (!wiimote)
     return "no-wiimote";
   WiimoteEmu::DesiredWiimoteState state;
@@ -842,11 +847,19 @@ static std::string AemlDescribeWiimote()
     const auto& g = state.motion_plus->gyro.value;
     mp = std::to_string(g.x) + "," + std::to_string(g.y) + "," + std::to_string(g.z);
   }
+  std::string nun = "none";
+  if (const auto* nc = std::get_if<WiimoteEmu::Nunchuk::DataFormat>(&state.extension.data))
+  {
+    const auto a = nc->GetAccel().value;
+    nun = "stick=" + std::to_string(nc->jx) + "," + std::to_string(nc->jy) +
+          " cz=" + std::to_string(int(nc->GetButtons())) + " nacc=" + std::to_string(a.x) + "," +
+          std::to_string(a.y) + "," + std::to_string(a.z);
+  }
   return "buttons=" + std::to_string(state.buttons.hex) +
          " ext=" + std::to_string(state.extension.data.index()) +
          " cam0=" + std::to_string(cam.x) + "," + std::to_string(cam.y) +
          " accel=" + std::to_string(acc.x) + "," + std::to_string(acc.y) + "," +
-         std::to_string(acc.z) + " mplus=" + mp;
+         std::to_string(acc.z) + " mplus=" + mp + " nunchuk[" + nun + "]";
 }
 
 extern "C"
@@ -857,7 +870,18 @@ EMSCRIPTEN_KEEPALIVE
 const char* AemlWiimoteSelfTest()
 {
   static std::string s_result;
-  s_result = AemlDescribeWiimote();
+  // P1..P4: source (0 none / 1 emulated), Bluetooth link state, emulated output.
+  s_result.clear();
+  const auto bt = WiiUtils::GetBluetoothEmuDevice();
+  for (int i = 0; i < 4; ++i)
+  {
+    const int src = int(Config::Get(Config::GetInfoForWiimoteSource(i)));
+    const int link = bt ? int(bt->AccessWiimoteByIndex(i)->IsConnected()) : -1;
+    s_result += "P" + std::to_string(i + 1) + "{src=" + std::to_string(src) +
+                " link=" + std::to_string(link) + " " + AemlDescribeWiimote(i) + "}";
+    if (i < 3)
+      s_result += " ";
+  }
   return s_result.c_str();
 }
 

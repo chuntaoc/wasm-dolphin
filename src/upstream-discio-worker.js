@@ -981,6 +981,9 @@ async function handleMessage(type, payload) {
     case "setWiimoteState":
       api?.setWiimoteState?.(payload);
       return {};
+    case "setWiimoteConnected":
+      api?.setWiimoteConnected?.(payload);
+      return {};
     case "aemlWiimoteSelfTest":
       return { result: api?.aemlWiimoteSelfTest ? api.aemlWiimoteSelfTest() : "unsupported" };
     case "setInputState":
@@ -2389,8 +2392,9 @@ function bindApi(module) {
             ccall(
               "SetWiimoteState",
               null,
-              ["number", "number", "number", "number", "number", "number", "number", "number", "number", "number", "number", "number", "number", "number"],
+              ["number", "number", "number", "number", "number", "number", "number", "number", "number", "number", "number", "number", "number", "number", "number", "number", "number", "number"],
               [
+                Math.max(0, Math.min(3, s.slot | 0)),
                 s.buttons >>> 0,
                 s.extension | 0,
                 +s.stickX || 0,
@@ -2404,9 +2408,16 @@ function bindApi(module) {
                 +s.gyroX || 0,
                 +s.gyroY || 0,
                 +s.gyroZ || 0,
-                s.motionPlus ? 1 : 0
+                (s.motionPlus ? 1 : 0) | (s.nunchukAccel ? 2 : 0),
+                +s.naccX || 0,
+                +s.naccY || 0,
+                s.naccZ === undefined ? 1 : +s.naccZ || 0
               ]
             )
+        : null,
+    setWiimoteConnected:
+      typeof module._SetWiimoteConnected === "function"
+        ? (s) => ccall("SetWiimoteConnected", null, ["number", "number"], [s.slot | 0, s.connected ? 1 : 0])
         : null,
     setInputState:
       typeof module._SetInputState === "function"
