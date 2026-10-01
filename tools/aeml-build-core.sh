@@ -25,6 +25,12 @@ mkdir -p "$BUILD" "$OUT" "$ROOT/build/naga-stub"
 emcc -O2 -pthread -c "$ROOT/tools/aeml-naga-stub.c" -o "$ROOT/build/naga-stub/stub.o"
 emar rcs "$ROOT/build/naga-stub/libnaga_spirv_wgsl.a" "$ROOT/build/naga-stub/stub.o"
 NAGA="$ROOT/build/naga-stub/libnaga_spirv_wgsl.a"
+# Prefer the real Naga bridge (WebGPU hardware renderer) when it has been built:
+#   cd tools/naga-spirv-wgsl && RUSTC_BOOTSTRAP=1 cargo build --locked --release \
+#     --target wasm32-unknown-emscripten      (Ubuntu rustc 1.91 + rust-1.91-src works)
+REAL_NAGA="$ROOT/tools/naga-spirv-wgsl/target/wasm32-unknown-emscripten/release/libnaga_spirv_wgsl.a"
+if [ -f "$REAL_NAGA" ] && [ "${AEML_NAGA_STUB:-0}" != "1" ]; then NAGA="$REAL_NAGA"; fi
+echo "Naga library: $NAGA"
 
 # 2. Configure (same flags as the committed core, see its build.json)
 FLAGS="-O3 -pthread -msimd128 $LTO -DXXH_VECTOR=0 -DDOLPHIN_WEB_HOT_COUNTERS=0 \
@@ -53,6 +59,9 @@ if [ ! -f "$BUILD/CMakeCache.txt" ]; then
     "-DDOLPHIN_WASM_CORE_SOURCE=$ROOT/core/upstream/dolphin_web_core.cpp" \
     "-DDOLPHIN_WASM_OUTPUT_DIR=$OUT"
 fi
+
+# keep an existing configuration in sync with the chosen Naga library
+cmake "$BUILD" "-DDOLPHIN_WASM_NAGA_WGSL_LIB=$NAGA" > /dev/null
 
 # 3. Build the full browser core
 cmake --build "$BUILD" --target dolphin_web_core --parallel "$JOBS"

@@ -22,7 +22,7 @@ const ALLOWED_PARENTS = [
 const params = new URLSearchParams(location.search);
 const EMBED = params.get("embed") === "aeml" && window.parent !== window;
 const SIG = "AEML, NTUST";
-const BRIDGE_VER = "1.5";
+const BRIDGE_VER = "1.6";
 let parentOrigin = null;
 
 function allowed(origin) { return ALLOWED_PARENTS.some((re) => re.test(origin)); }
@@ -183,6 +183,7 @@ if (EMBED) {
   window.addEventListener("error", (e) => diag("ERROR", "uncaught: " + (e.message || e)));
   window.addEventListener("unhandledrejection", (e) => diag("ERROR", "unhandled promise: " + ((e.reason && e.reason.message) || e.reason)));
   diag("env", "bridge " + BRIDGE_VER + " | isolated=" + window.crossOriginIsolated + " | " + navigator.userAgent);
+  diag("env", "core settings " + (location.search || "(defaults)"));
   diag("env", "cpu threads=" + (navigator.hardwareConcurrency || "?") + " memory=" + (navigator.deviceMemory || "?") + "GB webgpu=" + !!navigator.gpu);
 }
 
