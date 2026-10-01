@@ -59,7 +59,7 @@ button,select,input{touch-action:manipulation}
 <div id="banner" hidden></div>
 <div id="link"><div class="lk"><div id="linkTxt"></div><div class="lkSub"><span class="zh">電腦頁面需保持開啟、勾選「藍牙／手機連結」</span><span class="en">Keep the emulator page open with Bluetooth / Phone checked</span></div></div></div>
 <div id="pad"></div>
-<div id="wm"><span id="aimTxt"></span> <span id="sensTxt" hidden><span class="zh">感測器未啟用</span><span class="en">sensors off</span></span> · AEML, NTUST</div>
+<div id="wm">v1.9 · <span id="aimTxt"></span> <span id="sensTxt" hidden><span class="zh">感測器未啟用</span><span class="en">sensors off</span></span> · AEML, NTUST</div>
 
 <!-- start sheet: one tap to unlock sensors, fullscreen and wake lock -->
 <div class="sheet" id="start">
@@ -99,6 +99,8 @@ button,select,input{touch-action:manipulation}
  <span data-m="nohost"><span class="zh">找不到電腦頁面（配對碼可能已過期），請重新掃描 QR code。</span><span class="en">Emulator page not found (code may be old). Scan the QR code again.</span></span>
  <span data-m="tryrelay"><span class="zh">無法直接連線（網路可能隔離手機與電腦），改用網路中繼…</span><span class="en">No direct link (the network may isolate devices); trying a relay…</span></span>
  <span data-m="relayok"><span class="zh">已連線（網路中繼，反應稍慢）</span><span class="en">Connected (relay, a bit slower)</span></span>
+ <span data-m="relaynoack"><span class="zh">中繼伺服器已連上，但電腦頁面沒有回應。請確認電腦頁面已更新為 v1.9（「藍牙／手機連結」區塊會顯示「網路中繼：待命中 ✓」），再重新掃描 QR code。</span><span class="en">Relay server reached, but the emulator page does not answer. Make sure it is updated to v1.9 (it shows "Network relay: ready ✓"), then scan the QR code again.</span></span>
+ <span data-m="relayfail"><span class="zh">手機連不到中繼伺服器（0.peerjs.com），可能被這個網路擋住。可改用手機行動網路試試。</span><span class="en">The phone cannot reach the relay server (0.peerjs.com); this network may block it. Try mobile data.</span></span>
  <span data-m="nolib"><span class="zh">GitHub 上缺少 peerjs.min.js，請上傳後重新整理。</span><span class="en">peerjs.min.js is missing on GitHub; upload it and reload.</span></span>
  <span data-m="centered"><span class="zh">已置中</span><span class="en">Centered</span></span>
 </div>
@@ -323,7 +325,10 @@ button,select,input{touch-action:manipulation}
       if (state === 'closed') relayOk = false;
     });
     /* keep saying hello until the emulator page answers */
-    setTimeout(function () { if (relay && !relayOk && !linkOk) linkState('nohost', 'wait'); }, 9000);
+    setTimeout(function () {
+      if (!relay || relayOk || linkOk) return;
+      linkState(relay.isOpen() ? 'relaynoack' : 'relayfail', 'wait');
+    }, 9000);
     (function hello() { if (!relay) return; if (!relayOk && relay.isOpen()) relay.send(HOST_RELAY, { t: 'hello', sig: SIG }); setTimeout(hello, relayOk ? 3000 : 1500); })();
   }
   function lost() { if (!linkOk) return; linkOk = false; if (relayOk) { linkState('relayok', 'ok'); return; } linkState('lost', 'wait'); retry(2000); startRelay(); }

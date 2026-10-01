@@ -1,5 +1,5 @@
 export const DEFAULT_UPSTREAM_CORE_URL = "./cores/dolphin/dolphin-core-upstream.js";
-export const DEFAULT_UPSTREAM_CORE_SHA256 = "da4a658e0d3f3aa1b60755543177058d52bac46da79acfc7018ccc350d03a0e0"; // AEML, NTUST core with Wii Remote hook
+export const DEFAULT_UPSTREAM_CORE_SHA256 = "418f2267aa6fb971a14d696300a4d906390216158c0bc6dbbef9cf3ab0801bcf"; // AEML, NTUST core with Wii Remote hook
 export const DISCIO_UPSTREAM_CORE_URL = "./cores/dolphin/dolphin-upstream.js";
 export const WORKERFS_MOUNT_DIR = "/workerfs";
 export const XFB_FAST_PATH_FLAGS = Object.freeze({
