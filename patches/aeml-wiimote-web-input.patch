@@ -357,7 +357,7 @@ index 7fc81f6321..e2fcf82ed6 100644
    m_rumble->controls.front()->control_ref->State(on);
  }
 diff --git a/Source/Core/Core/IOS/USB/Bluetooth/BTEmu.cpp b/Source/Core/Core/IOS/USB/Bluetooth/BTEmu.cpp
-index 000883ec3f..b11f4bedc6 100644
+index 000883ec3f..06a255f08c 100644
 --- a/Source/Core/Core/IOS/USB/Bluetooth/BTEmu.cpp
 +++ b/Source/Core/Core/IOS/USB/Bluetooth/BTEmu.cpp
 @@ -17,6 +17,8 @@
@@ -369,7 +369,7 @@ index 000883ec3f..b11f4bedc6 100644
  #include "Core/HW/WiimoteEmu/DesiredWiimoteState.h"
  #include "Core/IOS/Device.h"
  #include "Core/IOS/IOS.h"
-@@ -306,8 +308,31 @@ void BluetoothEmuDevice::AddEventToQueue(const SQueuedEvent& event)
+@@ -306,8 +308,39 @@ void BluetoothEmuDevice::AddEventToQueue(const SQueuedEvent& event)
    }
  }
  
@@ -378,8 +378,16 @@ index 000883ec3f..b11f4bedc6 100644
 +// disconnected as players' phones join and leave (dolphin_web_discio.cpp).
 +// Applied here, on the CPU thread, through the normal source setting.
 +extern "C" int DolphinWeb_WiimoteWanted(int slot);
-+static void AemlSyncWebWiimotes()
++extern "C" void DolphinWeb_SetLinks(int bits);
++static void AemlSyncWebWiimotes(BluetoothEmuDevice* bt)
 +{
++  // Report which remotes are linked right now (the console puts idle ones to sleep).
++  int links = 0;
++  for (int i = 0; i < 4; ++i)
++    if (bt->AccessWiimoteByIndex(i)->IsConnected())
++      links |= 1 << i;
++  DolphinWeb_SetLinks(links);
++
 +  // Config::Get is cached, so checking every update is cheap; comparing with
 +  // the setting (not a remembered value) also survives a new boot's config.
 +  for (int i = 1; i < 4; ++i)
@@ -396,7 +404,7 @@ index 000883ec3f..b11f4bedc6 100644
  void BluetoothEmuDevice::Update()
  {
 +#ifdef __EMSCRIPTEN__
-+  AemlSyncWebWiimotes();
++  AemlSyncWebWiimotes(this);
 +#endif
    // check HCI queue
    if (!m_event_queue.empty() && m_hci_endpoint)

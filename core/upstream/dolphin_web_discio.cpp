@@ -863,6 +863,12 @@ static std::mutex s_wiimote_mutex;
 static constexpr int WEB_WIIMOTES = 4;
 static DolphinWebWiimoteState s_wiimote[WEB_WIIMOTES] = {};
 static bool s_wiimote_active[WEB_WIIMOTES] = {};
+// A tap shorter than an emulator stutter could be missed by the game, so each new
+// press is held until the emulated remote has been read a few times (~30 ms of
+// emulated time at 200 reads/s; the game reads it once per frame).
+static std::uint32_t s_wiimote_latch[WEB_WIIMOTES] = {};
+static int s_wiimote_latch_reads[WEB_WIIMOTES] = {};
+static constexpr int WEB_LATCH_READS = 6;
 static std::atomic<int> s_wiimote_wanted[WEB_WIIMOTES] = {1, 0, 0, 0};  // remote 1 is always connected
 
 static float ClampUnit(float v, float lo, float hi)
@@ -900,6 +906,12 @@ void SetWiimoteState(int slot, std::uint32_t buttons, int extension, float stick
   next.nacc_y = ClampUnit(nacc_y, -8.f, 8.f);
   next.nacc_z = ClampUnit(nacc_z, -8.f, 8.f);
   const std::lock_guard<std::mutex> lock(s_wiimote_mutex);
+  const std::uint32_t newly = next.buttons & ~s_wiimote[slot].buttons;
+  if (newly)
+  {
+    s_wiimote_latch[slot] |= newly;
+    s_wiimote_latch_reads[slot] = 0;
+  }
   s_wiimote[slot] = next;
   s_wiimote_active[slot] = true;
 }
@@ -933,6 +945,12 @@ struct WebSpeakerRing
 static std::mutex s_speaker_mutex;
 static WebSpeakerRing s_speaker[WEB_WIIMOTES];
 static constexpr std::size_t WEB_SPEAKER_MAX = 16000;  // about 2 s, oldest dropped
+
+static std::atomic<int> s_link_bits{0};
+void DolphinWeb_SetLinks(int bits)
+{
+  s_link_bits.store(bits & 0xf, std::memory_order_relaxed);
+}
 
 void DolphinWeb_SetRumble(int index, int on)
 {
@@ -975,8 +993,10 @@ EMSCRIPTEN_KEEPALIVE
 #endif
 int AemlGetRumble()
 {
-  return s_rumble_bits.load(std::memory_order_relaxed) |
-         s_rumble_latch.exchange(0, std::memory_order_relaxed);
+  // bits 0-3: rumble motors; bits 8-11: remotes linked to the console.
+  return (s_rumble_bits.load(std::memory_order_relaxed) |
+          s_rumble_latch.exchange(0, std::memory_order_relaxed)) |
+         (s_link_bits.load(std::memory_order_relaxed) << 8);
 }
 
 // mask: bit n = remote n's speaker goes to its phone (and is not played here).
@@ -1029,6 +1049,12 @@ int DolphinWeb_GetWiimoteState(int index, DolphinWebWiimoteState* out)
   if (!s_wiimote_active[index])
     return 0;
   *out = s_wiimote[index];
+  if (s_wiimote_latch[index])
+  {
+    out->buttons |= s_wiimote_latch[index];
+    if (++s_wiimote_latch_reads[index] >= WEB_LATCH_READS)
+      s_wiimote_latch[index] = 0;
+  }
   return 1;
 }
 

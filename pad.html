@@ -138,6 +138,7 @@ button,select,input{touch-action:manipulation}
  <span data-m="whorem"><span class="zh">🎮 Wii 遙控器</span><span class="en">🎮 Wii Remote</span></span>
  <span data-m="whonun"><span class="zh">🥢 雙節棍</span><span class="en">🥢 Nunchuk</span></span>
  <span data-m="plfull"><span class="zh">已有 4 位玩家，這支手機暫時沒有分配（可在 ⚙ 改當雙節棍）</span><span class="en">4 players already; this phone is not assigned (⚙ can make it a Nunchuk)</span></span>
+ <span data-m="asleep"><span class="zh">💤 遙控器休眠中（遊戲機省電）：按任一鍵喚醒；遊戲要求時請同時按 1＋2</span><span class="en">💤 Remote asleep (console power saving): press any button; press 1+2 together if the game asks</span></span>
  <span data-m="plis"><span class="zh">你是玩家 </span><span class="en">You are player </span></span>
 </div>
 
@@ -481,12 +482,17 @@ button,select,input{touch-action:manipulation}
       }
     }
     if (d.t === 'rumble') rumble(!!d.on);
+    if (d.t === 'sleep') {
+      var zb = $('#banner');
+      if (d.on) { zb.textContent = ''; zb.appendChild(document.querySelector('#msgs [data-m="asleep"]').cloneNode(true)); zb.hidden = false; asleep = true; }
+      else if (asleep) { asleep = false; if (calibStep < 0) zb.hidden = true; }
+    }
     if (d.t === 'spk') playSpeaker(d.r, d.a);
   }
 
   /* ---------- game rumble (v2.3) ----------
    * Android: vibration motor. iPhone: Safari gives web pages no vibration API. */
-  var rumbleOn = false, rumbleT = 0;
+  var rumbleOn = false, rumbleT = 0, asleep = false;
   function rumble(on) {
     on = on && cfg.rum && ROLE !== 'nunchuk';
     if (!navigator.vibrate) return;

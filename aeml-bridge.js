@@ -384,7 +384,7 @@ async function libStore(file, title) {
   const list = libList();
   if (list.some((g) => g.name === file.name && g.size === file.size)) return;
   const est = await navigator.storage.estimate().catch(() => null);
-  if (est && est.quota - est.usage < file.size + 256 * 1048576) {
+  if (est && est.quota - est.usage < file.size + 64 * 1048576) {
     diag("lib", "not saved, not enough browser storage: need " + gb(file.size) + ", free " + gb(est.quota - est.usage));
     libStatus("💾 瀏覽器空間不足，未保存 / not enough space"); setTimeout(() => libStatus(""), 6000);
     return;
@@ -452,13 +452,14 @@ async function loadGame(file) {
     const mute = document.getElementById("muteButton");
     if (mute && /^muted$/i.test(mute.getAttribute("aria-label") || "")) askGesture();
   }, 300);
+  linksSeen = false; outLinks = -1;
   return host.game.name || "";
 }
 
 /* ---- Wii Remote outputs -> phones (AEML, NTUST) ----
  * While the page asks for it, poll the core about 20 times a second for the
  * rumble motors and for speaker audio of remotes whose phone plays it. */
-let outOn = false, outMask = 0, outTimer = 0, outBusy = false, outRumble = -1, outWarned = false;
+let outOn = false, outMask = 0, outTimer = 0, outBusy = false, outRumble = -1, outLinks = -1, linksSeen = false, outWarned = false;
 function setOutputs(on, mask) {
   outOn = !!on; outMask = (mask | 0) & 15;
   clearInterval(outTimer); outTimer = 0;
@@ -474,10 +475,15 @@ async function pollOutputs() {
     if (!r) return;
     if (!r.supported) { if (!outWarned) { outWarned = true; diag("out", "core has no rumble/speaker outputs (old core)"); } return; }
     const audio = (r.audio || []).map((x) => ({ p: x.p, rate: x.rate, pcm: x.pcm }));
-    if (r.rumble !== outRumble || audio.length) {
-      if (r.rumble !== outRumble && diagOn) diag("out", "rumble " + [0, 1, 2, 3].map((i) => (r.rumble >> i) & 1 ? "P" + (i + 1) : "-").join(" "));
-      outRumble = r.rumble;
-      post({ cmd: "outputs", rumble: r.rumble, audio }, audio.map((x) => x.pcm.buffer));
+    const rumble = r.rumble & 15, links = (r.rumble >> 8) & 15;
+    if (links) linksSeen = true;  /* only Wii games report links; GameCube games never do */
+    const msg = { cmd: "outputs", rumble, audio };
+    if (linksSeen) msg.links = links;
+    if (rumble !== outRumble || (linksSeen && links !== outLinks) || audio.length) {
+      if (rumble !== outRumble && diagOn) diag("out", "rumble " + [0, 1, 2, 3].map((i) => (rumble >> i) & 1 ? "P" + (i + 1) : "-").join(" "));
+      if (linksSeen && links !== outLinks) diag("out", "linked remotes: " + [0, 1, 2, 3].map((i) => (links >> i) & 1 ? "P" + (i + 1) : "-").join(" "));
+      outRumble = rumble; if (linksSeen) outLinks = links;
+      post(msg, audio.map((x) => x.pcm.buffer));
     }
   } catch (e) { /* core busy or reloading */ }
   finally { outBusy = false; }
