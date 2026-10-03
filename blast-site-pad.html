@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><meta name="theme-color" content="#13161d"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Blast Site"><title>Blast Site - Phone controller (AEML, NTUST)</title><style>html,body{margin:0;background:#13161d;overscroll-behavior:none;height:100%;-webkit-text-size-adjust:100%}</style></head><body>
 <!-- ======================================================================
-  Blast Site / 爆破工地  v2.3.0  -  bomb-arena game for Blogger
+  Blast Site / 爆破工地  v2.4.0  -  bomb-arena game for Blogger
   (c) 2026 AEML, NTUST. All rights reserved.  Owner mark: AEML, NTUST
   Integrity-checked: editing the script, removing the "AEML, NTUST" credit,
   or changing data-sig / data-owner disables the game.
@@ -12,7 +12,7 @@
     data-lib   = folder holding peerjs.min.js and qrcode.js (defaults to data-pad's folder)
     data-peer / data-turn = optional PeerJS server / TURN server (same format as the Wii page)
 ====================================================================== -->
-<div id="aemlBomber" class="L-zh M-battle" data-owner="AEML, NTUST" data-app="Blast Site" data-sig="b4c40c27cf771bfb" data-relay="https://aeml-wii-relay.chuntaoc.workers.dev" data-pad="" data-lib="" data-peer="" data-turn="">
+<div id="aemlBomber" class="L-zh M-battle" data-owner="AEML, NTUST" data-app="Blast Site" data-sig="b9f37312a245f1f6" data-relay="https://aeml-wii-relay.chuntaoc.workers.dev" data-pad="" data-lib="" data-peer="" data-turn="">
 <style>
 /* Blast Site v2 - AEML, NTUST - scoped styles (ASCII only) */
 #aemlBomber{--bg:#13161d;--panel:#1e222c;--panel2:#262b37;--fg:#eef1f6;--mut:#9aa3b2;--acc:#ffb703;--acc2:#4fc3f7;--bd:#363d4c;--bad:#ef5350;--ok:#66bb6a;font-family:system-ui,-apple-system,"Segoe UI","Microsoft JhengHei","PingFang TC","Noto Sans TC",Roboto,sans-serif;color:var(--fg);background:var(--bg);max-width:900px;margin:0 auto;border-radius:14px;padding:10px;box-sizing:border-box;line-height:1.35;font-size:14px;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;text-align:left}
@@ -149,6 +149,20 @@
 #aemlBomber .bm-touch .np-mid{align-self:flex-end;margin-bottom:6px}
 #aemlBomber .bm-stage.touch{padding-bottom:168px}
 #aemlBomber.bm-panel .bm-touch{display:none}
+#aemlBomber .bm-fsbar{display:none;gap:4px}
+#aemlBomber .bm-fsbar button{font-size:12px;padding:4px 9px;min-height:30px}
+#bmStage:fullscreen .bm-fsbar,#bmStage:-webkit-full-screen .bm-fsbar,#aemlBomber .bm-stage.bm-pfs .bm-fsbar{display:flex}
+html.aeml-noscroll,html.aeml-noscroll body{overflow:hidden!important;overscroll-behavior:none;touch-action:none}
+#aemlBomber .bm-stage.bm-pfs .bm-hud{width:min(100%,960px);margin-bottom:4px}
+@media (orientation:landscape) and (max-height:500px){
+ #aemlBomber .bm-stage.bm-pfs .bm-hud,#bmStage:fullscreen .bm-hud{position:absolute;left:max(8px,env(safe-area-inset-left));top:max(4px,env(safe-area-inset-top));right:max(8px,env(safe-area-inset-right));width:auto;z-index:8;pointer-events:none;margin:0}
+ #aemlBomber .bm-stage.bm-pfs .bm-hud>*,#bmStage:fullscreen .bm-hud>*{pointer-events:auto}
+ #aemlBomber .bm-stage.bm-pfs .bm-cards,#bmStage:fullscreen .bm-cards{flex-direction:column;align-items:flex-start;max-width:24vw;position:absolute;left:0;top:40px}
+ #aemlBomber .bm-stage.bm-pfs .bm-card,#bmStage:fullscreen .bm-card{font-size:10px;padding:2px 5px;gap:3px}
+ #aemlBomber .bm-stage.bm-pfs .bm-timer,#bmStage:fullscreen .bm-timer{position:absolute;right:0;top:0}
+ #aemlBomber .bm-stage.bm-pfs .bm-wrap,#bmStage:fullscreen .bm-wrap{width:min(calc(100vw - 2*min(25vw,230px)),calc((100dvh - 8px)*15/13));width:min(calc(100vw - 2*min(25vw,230px)),calc((100vh - 8px)*15/13))}
+ #aemlBomber .bm-stage.bm-pfs.touch .bm-cards,#bmStage:fullscreen.touch .bm-cards{display:none}
+}
 #aemlBomber .bm-foot{margin-top:8px;font-size:11px;color:var(--mut);text-align:center;opacity:1;display:block}
 #aemlBomber .bm-foot b{color:var(--fg)}
 #aemlBomber .bm-tamper{position:absolute;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;background:#200;color:#fff;font-weight:700;text-align:center;padding:16px}
@@ -199,6 +213,11 @@
 }
 #aemlBomber .pm-foot{text-align:center;font-size:10px;color:var(--mut)}
 #aemlBomber .pm-menu{display:none}
+#aemlBomber .pm-imm #pmTop1 .pm-stat,#aemlBomber .pm-imm #pmTop1 .pm-ps{display:none!important}
+#aemlBomber .pm-imm.pm-open #pmTop1 .pm-ps{display:flex!important}
+#aemlBomber .pm-imm #pmTop1{background:none;border:0;padding:0}
+#aemlBomber .pm-imm .pm-hud{font-size:10px;opacity:.85}
+#aemlBomber.bm-padmode:has(.pm-imm) #bmFoot{opacity:.35}
 #aemlBomber .pm-help{display:none;text-align:center;font-size:12px;color:var(--mut);padding:4px}
 #aemlBomber .pm-desk .pm-help{display:block}
 #aemlBomber .pm-desk .pm-dp,#aemlBomber .pm-desk .pm-ab,#aemlBomber .pm-desk .pm-mid{display:none!important}
@@ -257,7 +276,7 @@
 </div>
 
 <div class="bm-stage" id="bmStage">
-  <div class="bm-hud"><div class="bm-cards" id="bmCards"></div><div class="bm-timer" id="bmTimer"><span id="bmInfo"></span><b id="bmTime">3:00</b></div></div>
+  <div class="bm-hud"><div class="bm-fsbar"><button data-act="pause"><span class="t-p">&#9208;</span><span class="t-r">&#9654;</span></button><button data-act="title2">&#8962;</button><button data-act="mute">&#128266;</button><button data-act="full">&#10005; <span class="zh">離開全螢幕</span><span class="en">Exit fullscreen</span></button></div><div class="bm-cards" id="bmCards"></div><div class="bm-timer" id="bmTimer"><span id="bmInfo"></span><b id="bmTime">3:00</b></div></div>
   <div class="bm-wrap q0" id="bmWrap">
     <canvas id="bmCanvas" width="240" height="208"></canvas>
     <canvas id="bmGpu" hidden></canvas>
@@ -457,7 +476,7 @@
   <div class="pm-foot">&copy; AEML, NTUST &middot; <span class="zh">A＝炸彈　B/SELECT＝遙控引爆　START＝暫停</span><span class="en">A = bomb · B/SELECT = detonate · START = pause</span></div>
 </div>
 
-<div class="bm-foot" id="bmFoot">&copy; 2026 <b>AEML, NTUST</b> &middot; Blast Site v2.3.0 &middot; <span class="zh">原創作品，未經授權請勿修改或轉載</span><span class="en">Original work - do not modify or redistribute without permission</span></div>
+<div class="bm-foot" id="bmFoot">&copy; 2026 <b>AEML, NTUST</b> &middot; Blast Site v2.4.0 &middot; <span class="zh">原創作品，未經授權請勿修改或轉載</span><span class="en">Original work - do not modify or redistribute without permission</span></div>
 <input type="file" id="bmFile" accept=".json,application/json" hidden>
 
 <div id="bmT" hidden>
@@ -573,7 +592,7 @@ const ROOT=document.getElementById('aemlBomber');
 if(!ROOT||ROOT.getAttribute('data-ready')==='1')return;
 ROOT.setAttribute('data-ready','1');
 const SELF=document.currentScript;
-const OWNER='AEML, NTUST',APP='Blast Site',VER='2.3.0',KEY='aeml_blastsite_v2_';
+const OWNER='AEML, NTUST',APP='Blast Site',VER='2.4.0',KEY='aeml_blastsite_v2_';
 const PEERJS='https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js';
 const QRJS='https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js';
 const $=id=>document.getElementById(id);
@@ -1435,7 +1454,7 @@ function sendFrames(){
   const t=now();let viewers=0,cfV=0;
   LINK.ph.forEach(e=>{if(e.view){viewers++;if(e.route==='cloud')cfV++;}});
   if(!viewers){PHEV.length=0;return;}
-  if(t-LINK.lastV<66)return;LINK.lastV=t;
+  if(t-LINK.lastV<(cfV>2?50:33))return;LINK.lastV=t;
   const f=buildFrame(),relayTurn=t-LINK.lastVr>=200;if(relayTurn)LINK.lastVr=t;
   if(cfV&&LINK.cf&&LINK.cf.readyState===1)LINK.cf.send(JSON.stringify({d:f}));
   LINK.ph.forEach(e=>{if(!e.view||e.route==='cloud')return;if(e.route==='relay'&&!relayTurn)return;e.send(f);});
@@ -1470,12 +1489,13 @@ function shade(hex,f){const n=parseInt(hex.slice(1),16);let r=n>>16,g=(n>>8)&255
 
 /* ---------------- rendering: Canvas 2D, resolution follows the display (up to 2K+) ---------------- */
 const CV=$('bmCanvas'),GC=$('bmGpu');
-const R={ts:16,scene:null,ctx:null,off:null,st:null,stx:null,sl:null,slx:null,softSig:-1,spr:{},staticDirty:true,active:'sw',shake:0,parts:[],t:0,gpuErr:'',q:1,stTheme:-1,resT:0};
+const R={dyn:1,dynT:0,dynN:0,dynS:0,dynOk:0,ts:16,scene:null,ctx:null,off:null,st:null,stx:null,sl:null,slx:null,softSig:-1,spr:{},staticDirty:true,active:'sw',shake:0,parts:[],t:0,gpuErr:'',q:1,stTheme:-1,resT:0};
 function calcTs(){
   const q=R.q;if(q===0)return 16;
   const box=PADMODE?$('pmCv'):$('bmWrap');
-  const w=(box&&box.clientWidth)||600,dpr=Math.min(window.devicePixelRatio||1,3);
-  const px=w*dpr*(q===2?1.5:1),cap=PADMODE?[16,80,128][q]:[16,96,176][q],lo=q===2?48:32;
+  const mob=touchCapable()&&window.matchMedia&&matchMedia('(pointer:coarse)').matches;
+  const w=(box&&box.clientWidth)||600,dpr=Math.min(window.devicePixelRatio||1,mob?2:3);
+  const px=w*dpr*(q===2?1.5:1)*R.dyn,cap=PADMODE||mob?[16,64,112][q]:[16,96,176][q],lo=q===2?40:24;
   return clamp(Math.round(px/15/2)*2,lo,cap);
 }
 function setupScene(){
@@ -1494,6 +1514,16 @@ function setupScene(){
   if(R.active==='gpu'&&!PADMODE){gpuResize();gpuTexture(w,h);}
 }
 function checkRes(){if(R.q&&calcTs()!==R.ts)setupScene();}
+function perfWatch(dt){
+  if(document.hidden||dt>100)return;
+  R.dynS+=dt;R.dynN++;
+  if(R.dynN<90)return;
+  const avg=R.dynS/R.dynN;R.dynS=0;R.dynN=0;
+  if(avg>19.5){R.dynOk=0;
+    if(R.q&&R.dyn>0.55){R.dyn=Math.max(0.5,R.dyn*0.8);log('auto resolution x'+R.dyn.toFixed(2)+' (avg frame '+avg.toFixed(1)+'ms)');checkRes();}
+    else if(R.active==='gpu'&&!PADMODE&&touchCapable()){R.active='sw';setupScene();gpuNote();log('mobile: WebGPU present too slow, using software');}
+  }else if(avg<15&&R.dyn<1){if(++R.dynOk>=3){R.dynOk=0;R.dyn=Math.min(1,R.dyn*1.15);checkRes();}}
+}
 function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.lineTo(x+w-r,y);c.quadraticCurveTo(x+w,y,x+w,y+r);c.lineTo(x+w,y+h-r);c.quadraticCurveTo(x+w,y+h,x+w-r,y+h);c.lineTo(x+r,y+h);c.quadraticCurveTo(x,y+h,x,y+h-r);c.lineTo(x,y+r);c.quadraticCurveTo(x,y,x+r,y);c.closePath();}
 function circ(c,x,y,r,col){c.fillStyle=col;c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.fill();}
 function ell(c,x,y,rx,ry,col){c.fillStyle=col;c.beginPath();c.ellipse(x,y,Math.max(0.01,rx),Math.max(0.01,ry),0,0,Math.PI*2);c.fill();}
@@ -2247,9 +2277,10 @@ function renderReplays(){
 function fsEl(){return document.fullscreenElement||document.webkitFullscreenElement||null;}
 function toggleFull(){
   const st=$('bmStage');
-  if(fsEl()||st.classList.contains('bm-pfs')){if(fsEl()){const ex=document.exitFullscreen||document.webkitExitFullscreen;if(ex)ex.call(document);}st.classList.remove('bm-pfs');setTimeout(onResize,100);return;}
-  const rq=st.requestFullscreen||st.webkitRequestFullscreen;
-  const fallback=()=>{st.classList.add('bm-pfs');setTimeout(onResize,100);};
+  if(fsEl()||st.classList.contains('bm-pfs')){if(fsEl()){const ex=document.exitFullscreen||document.webkitExitFullscreen;if(ex)ex.call(document);}st.classList.remove('bm-pfs');document.documentElement.classList.remove('aeml-noscroll');setTimeout(onResize,100);return;}
+  const isPhone=/iPhone|iPod/.test(navigator.userAgent);
+  const rq=isPhone?null:(st.requestFullscreen||st.webkitRequestFullscreen);
+  const fallback=()=>{st.classList.add('bm-pfs');document.documentElement.classList.add('aeml-noscroll');try{window.scrollTo(0,0);}catch(e){}setTimeout(onResize,100);};
   if(rq){try{const r=rq.call(st,{navigationUI:'hide'});if(r&&r.catch)r.catch(fallback);}catch(e){fallback();}}else fallback();
   try{if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('landscape').catch(()=>{});}catch(e){}
   UI.focus=true;ROOT.classList.remove('bm-nofocus');
@@ -2317,6 +2348,7 @@ function frame(t){
   requestAnimationFrame(frame);
   const t0=now();
   const dt=Math.min(250,lastT?t-lastT:16.7);lastT=t;
+  perfWatch(dt);
   pollInputs();
   let run=false;
   if(UI.state==='replay')run=RP.play&&!UI.panel;
@@ -2437,6 +2469,7 @@ function onHost(d,okKey){
 }
 function setMe(p){PAD.me=p;const m=$('pmMe');m.textContent=p>=0?'P'+(p+1):'P?';m.style.setProperty('--pc',p>=0?PCOL[p]:'#455a64');}
 function applyFrame(f){
+  if(PAD.pr&&S&&S.players){const me=S.players.find(p=>p.i===PAD.me);if(me){PAD.pr.anim=me.anim;}}
   if(f.pm){const me=f.pm.find(x=>x[0]===PAD.pid);if(me&&me[1]!==PAD.me)setMe(me[1]);}
   const fresh=!S||!S.grid;
   if(fresh)S={players:[],enemies:[],bombs:[]};
@@ -2449,12 +2482,41 @@ function applyFrame(f){
   S.players=f.P.map(a=>{const o=prev[a[0]]||{x:a[1]/100,y:a[2]/100};const tx=a[1]/100,ty=a[2]/100;
     const p={i:a[0],tx:tx,ty:ty,x:o.x,y:o.y,dir:a[3],alive:!!a[4],mv:a[5],inv:a[6],dT:a[7],anim:a[8]/100,curse:a[9],bombs:a[10],fire:a[11],spd:a[12],kick:a[13],remote:a[14],wins:a[15],lives:a[16],score:a[17],type:a[18]?'cpu':'human',wp:a[19],bp:a[20],vest:a[21]};
     if(Math.abs(p.x-tx)>1.5||Math.abs(p.y-ty)>1.5){p.x=tx;p.y=ty;}return p;});
-  S.bombs=f.B.map(a=>({x:a[0],y:a[1],vx:a[2],vy:a[3],off:a[4]/100,t:a[5],fuse:a[6]}));
+  S.bombs=f.B.map(a=>{const b={x:a[0],y:a[1],vx:a[2],vy:a[3],off:a[4]/100,t:a[5],fuse:a[6],pass:[]};if(PAD.pr&&Math.abs(PAD.pr.x-b.x)<0.95&&Math.abs(PAD.pr.y-b.y)<0.95)b.pass.push('pp');const o=(S.bombs||[]).find(z=>z.x===b.x&&z.y===b.y);if(o&&o.pass&&o.pass.length&&PAD.pr&&Math.abs(PAD.pr.x-b.x)<0.95&&Math.abs(PAD.pr.y-b.y)<0.95)b.pass=['pp'];return b;});
   const pe=S.enemies;S.enemies=f.E.map((a,k)=>{const o=pe[k]&&pe[k].type===a[0]?pe[k]:null;const tx=a[1]/100,ty=a[2]/100;const e={type:a[0],tx:tx,ty:ty,x:o?o.x:tx,y:o?o.y:ty,alive:!!a[3],dT:a[4],inv:a[5],anim:a[6]/100,dir:0};if(Math.abs(e.x-tx)>1.5||Math.abs(e.y-ty)>1.5){e.x=tx;e.y=ty;}if(o){e.dir=tx<o.tx?3:tx>o.tx?4:ty<o.ty?1:ty>o.ty?2:o.dir;}return e;});
   for(const k of (f.ev||[]))sfx(k);
   PAD.frameT=now();
   if(S.phase!==UI.lastPhase){UI.lastPhase=S.phase;if(S.phase==='ready'||S.phase==='play')musUpdate();else if(/Over|over|clear/.test(S.phase))musStop();}
   padHud();
+}
+/* client-side prediction: the phone moves its own worker at once, then eases toward the host's position */
+function predict(dt){
+  const me=S.players.find(p=>p.i===PAD.me);
+  if(!me||!me.alive||S.phase!=='play'||S.hostState){PAD.pr=null;return;}
+  let pr=PAD.pr;
+  if(!pr){pr=PAD.pr={uid:'pp',x:me.tx,y:me.ty,ghost:false,kick:0,acc:0,want:0,prev:0};}
+  pr.wp=me.wp;pr.bp=me.bp;pr.spd=me.spd;pr.curse=me.curse;
+  let b=sel2b(padBitsNow());
+  if(me.curse===2){let n=b&~15;if(b&BU)n|=BD;if(b&BD)n|=BU;if(b&BL)n|=BR;if(b&BR)n|=BL;b=n;}
+  const edge=b&~pr.prev;pr.prev=b;
+  pr.acc+=dt;let moving=false;
+  while(pr.acc>=16.67){
+    pr.acc-=16.67;
+    const pressed=[];for(let d=1;d<=4;d++)if(b&DB[d])pressed.push(d);
+    if(!pressed.length)break;
+    const ne=pressed.filter(d=>edge&DB[d]);
+    if(ne.length)pr.want=ne[ne.length-1];else if(pressed.indexOf(pr.want)<0)pr.want=pressed[0];
+    const spd=speedOf(pr);let mv=moveEnt(pr,DXS[pr.want],DYS[pr.want],spd),d=pr.want;
+    if(!mv)for(const q of pressed){if(q!==pr.want&&moveEnt(pr,DXS[q],DYS[q],spd)){mv=true;d=q;break;}}
+    if(mv){moving=true;me.dir=d;me.mv=1;me.anim+=spd;}
+  }
+  if(pr.acc>50)pr.acc=0;
+  const ex=me.tx-pr.x,ey=me.ty-pr.y,err=Math.abs(ex)+Math.abs(ey);
+  if(err>1.4){pr.x=me.tx;pr.y=me.ty;}
+  else{const k=moving?(err>0.55?0.12:0):0.2;const H=pr.want===3||pr.want===4;
+    if(moving){if(H)pr.y+=ey*0.25;else pr.x+=ex*0.25;}
+    pr.x+=ex*k;pr.y+=ey*k;}
+  me.x=pr.x;me.y=pr.y;
 }
 function padHud(){
   const h=$('pmHud');if(!S||!S.players)return;
@@ -2469,9 +2531,13 @@ function padHud(){
 function padLoop(){
   if(TAMPER)return;
   requestAnimationFrame(padLoop);
+  const t=now(),dt=Math.min(100,PAD.lt?t-PAD.lt:16.7);PAD.lt=t;
+  perfWatch(dt);
   if(S&&S.players&&PAD.view){
-    for(const p of S.players){p.x+=(p.tx-p.x)*0.35;p.y+=(p.ty-p.y)*0.35;}
-    for(const e of S.enemies){e.x+=(e.tx-e.x)*0.35;e.y+=(e.ty-e.y)*0.35;}
+    const k=1-Math.pow(0.5,dt/40);
+    for(const p of S.players){if(p.i===PAD.me&&PAD.pr)continue;p.x+=(p.tx-p.x)*k;p.y+=(p.ty-p.y)*k;}
+    for(const e of S.enemies){e.x+=(e.tx-e.x)*k;e.y+=(e.ty-e.y)*k;}
+    predict(dt);
     render();
   }
   padPollGp();
@@ -2497,8 +2563,9 @@ function padMode(P){
   $('pmBgm').onclick=()=>{auInit();SET.bgm=SET.bgm?0:1;saveSettings();auVol();tg('pmBgm',SET.bgm);musUpdate(true);};
   $('pmQ').onclick=()=>{SET.pq=(SET.pq+1)%3;saveSettings();$('pmQ').textContent=['LQ','SQ','HQ'][SET.pq];setupScene();};
   $('pmLang').onclick=()=>{SET.lang=SET.lang==='zh'?'both':SET.lang==='both'?'en':'zh';saveSettings();applyLang();};
-  const de=document.documentElement,rqf=de.requestFullscreen||de.webkitRequestFullscreen;
-  const goFull=tip=>{if(fsEl())return;if(!rqf){if(tip&&!P.sa)$('pmTip').hidden=false;return;}try{const r=rqf.call(de,{navigationUI:'hide'});const lock=()=>{try{if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('landscape').catch(()=>{});}catch(e){}};if(r&&r.then)r.then(lock).catch(()=>{if(tip)$('pmTip').hidden=false;});else lock();}catch(e){if(tip)$('pmTip').hidden=false;}};
+  const de=document.documentElement,rqf=/iPhone|iPod/.test(navigator.userAgent)?null:(de.requestFullscreen||de.webkitRequestFullscreen);
+  const imm=on=>{$('bmPad').classList.toggle('pm-imm',on);document.documentElement.classList.toggle('aeml-noscroll',on);try{window.scrollTo(0,0);}catch(e){}setTimeout(checkRes,80);};
+  const goFull=tip=>{if(fsEl())return;if(!rqf){if(tip){const on=!$('bmPad').classList.contains('pm-imm');imm(on);if(on&&!P.sa&&!store.get(KEY+'a2hs')){store.set(KEY+'a2hs','1');$('pmTip').hidden=false;}}return;}try{const r=rqf.call(de,{navigationUI:'hide'});const lock=()=>{try{if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('landscape').catch(()=>{});}catch(e){}};if(r&&r.then)r.then(lock).catch(()=>{if(tip)$('pmTip').hidden=false;});else lock();}catch(e){if(tip)$('pmTip').hidden=false;}};
   $('pmFull').onclick=()=>{if(fsEl()){const ex=document.exitFullscreen||document.webkitExitFullscreen;if(ex)ex.call(document);}else goFull(true);};
   $('pmTipX').onclick=()=>{$('pmTip').hidden=true;};
   $('pmMenu').onclick=()=>{$('bmPad').classList.toggle('pm-open');};
