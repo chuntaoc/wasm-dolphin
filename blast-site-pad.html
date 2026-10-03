@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><meta name="theme-color" content="#13161d"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Blast Site"><title>Blast Site - Phone controller (AEML, NTUST)</title><style>html,body{margin:0;background:#13161d;overscroll-behavior:none;height:100%;-webkit-text-size-adjust:100%}</style></head><body>
 <!-- ======================================================================
-  Blast Site / 爆破工地  v2.2.0  -  bomb-arena game for Blogger
+  Blast Site / 爆破工地  v2.3.0  -  bomb-arena game for Blogger
   (c) 2026 AEML, NTUST. All rights reserved.  Owner mark: AEML, NTUST
   Integrity-checked: editing the script, removing the "AEML, NTUST" credit,
   or changing data-sig / data-owner disables the game.
@@ -12,7 +12,7 @@
     data-lib   = folder holding peerjs.min.js and qrcode.js (defaults to data-pad's folder)
     data-peer / data-turn = optional PeerJS server / TURN server (same format as the Wii page)
 ====================================================================== -->
-<div id="aemlBomber" class="L-zh M-battle" data-owner="AEML, NTUST" data-app="Blast Site" data-sig="c8cf5a46b46e5402" data-relay="https://aeml-wii-relay.chuntaoc.workers.dev" data-pad="" data-lib="" data-peer="" data-turn="">
+<div id="aemlBomber" class="L-zh M-battle" data-owner="AEML, NTUST" data-app="Blast Site" data-sig="b4c40c27cf771bfb" data-relay="https://aeml-wii-relay.chuntaoc.workers.dev" data-pad="" data-lib="" data-peer="" data-turn="">
 <style>
 /* Blast Site v2 - AEML, NTUST - scoped styles (ASCII only) */
 #aemlBomber{--bg:#13161d;--panel:#1e222c;--panel2:#262b37;--fg:#eef1f6;--mut:#9aa3b2;--acc:#ffb703;--acc2:#4fc3f7;--bd:#363d4c;--bad:#ef5350;--ok:#66bb6a;font-family:system-ui,-apple-system,"Segoe UI","Microsoft JhengHei","PingFang TC","Noto Sans TC",Roboto,sans-serif;color:var(--fg);background:var(--bg);max-width:900px;margin:0 auto;border-radius:14px;padding:10px;box-sizing:border-box;line-height:1.35;font-size:14px;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;text-align:left}
@@ -199,6 +199,12 @@
 }
 #aemlBomber .pm-foot{text-align:center;font-size:10px;color:var(--mut)}
 #aemlBomber .pm-menu{display:none}
+#aemlBomber .pm-help{display:none;text-align:center;font-size:12px;color:var(--mut);padding:4px}
+#aemlBomber .pm-desk .pm-help{display:block}
+#aemlBomber .pm-desk .pm-dp,#aemlBomber .pm-desk .pm-ab,#aemlBomber .pm-desk .pm-mid{display:none!important}
+#aemlBomber .pm-desk .pm-main{grid-template-columns:1fr!important;grid-template-areas:"scr"!important}
+#aemlBomber .pm-desk .pm-cv{height:auto!important;max-width:none!important;width:min(96vw,calc((100vh - 120px)*15/13))!important}
+#aemlBomber.bm-padmode .pm-desk{position:relative}
 #aemlBomber .pm-code{display:inline-flex;gap:4px}
 #aemlBomber .pm-code input{width:84px;font:700 14px ui-monospace,Consolas,monospace;letter-spacing:2px;text-transform:uppercase;background:#0d1016;color:var(--acc);border:1px solid var(--bd);border-radius:8px;padding:4px 6px;-webkit-user-select:text;user-select:text}
 #aemlBomber .pm-tip{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:30;width:min(92vw,520px);background:rgba(19,22,29,.97);border:1px solid var(--acc);border-radius:12px;padding:14px 40px 14px 14px;font-size:14px;line-height:1.5}
@@ -234,6 +240,7 @@
   <div class="bm-tools">
     <button data-act="pause" id="bmBtnPause" title="P / Esc"><span class="t-p">&#9208; <span class="zh">暫停</span><span class="en">Pause</span></span><span class="t-r">&#9654; <span class="zh">繼續</span><span class="en">Resume</span></span></button>
     <button data-act="restart">&#8635; <span class="zh">重新開始</span><span class="en">Restart</span></button>
+    <button data-act="title2">&#8962; <span class="zh">回到標題</span><span class="en">Title</span></button>
     <button data-act="full" title="F2">&#9974; <span class="zh">全螢幕</span><span class="en">Fullscreen</span></button>
     <button data-act="mute" id="bmBtnVol" title="M">&#128266; <span class="zh">音量</span><span class="en">Volume</span></button>
     <button data-act="bgm" id="bmBtnBgm">&#127925; <span class="zh">音樂</span><span class="en">Music</span></button>
@@ -308,7 +315,7 @@
         <button data-act="saves">&#128194; <span class="zh">讀取存檔</span><span class="en">Load</span></button>
         <button data-act="replays">&#127902; <span class="zh">重播</span><span class="en">Replays</span></button>
         <button data-act="settings">&#9881; <span class="zh">設定</span><span class="en">Settings</span></button>
-        <button data-act="phone2">&#128241; <span class="zh">手機連線對戰</span><span class="en">Phone multiplayer</span></button>
+        <button data-act="phone2">&#128241; <span class="zh">手機／電腦連線對戰</span><span class="en">Phone / PC multiplayer</span></button>
       </div>
       <div class="bm-help">
         <b>P1</b><span>W A S D · <span class="zh">炸彈</span><span class="en">Bomb</span> Space · <span class="zh">特殊</span><span class="en">Special</span> E</span>
@@ -393,8 +400,8 @@
     </div></div>
 
     <div class="bm-ov" id="bmPhone"><div class="bm-box" style="max-width:440px">
-      <h3 class="bm-h"><span class="zh">手機連線對戰</span><span class="en">Phone multiplayer</span></h3>
-      <p class="bm-sub"><span class="zh">每位玩家用手機掃描 QR Code：手機就是搖桿，也會顯示遊戲畫面。依連線順序成為 P1–P4，可在手機上改選。</span><span class="en">Each player scans the QR code: the phone is a controller and shows the game. Phones take P1-P4 in join order and can pick another slot.</span></p>
+      <h3 class="bm-h"><span class="zh">手機／電腦連線對戰</span><span class="en">Phone / PC multiplayer</span></h3>
+      <p class="bm-sub"><span class="zh">手機玩家掃描 QR Code；用電腦的玩家按「複製網址」後傳給他（LINE、Email 皆可），在他的電腦瀏覽器開啟即可。每位玩家都會看到遊戲畫面，可用鍵盤、手把或觸控操作；依加入順序成為 P1–P4，也可自行改選。走雲端中繼時，不在同一地點也能一起玩。</span><span class="en">Phone players scan the QR code; for players on a computer, press Copy link and send it (LINE, email...) to open in their browser. Everyone sees the game and can use keyboard, gamepad or touch; players take P1-P4 in join order and can pick another slot. Over the cloud relay, players can be anywhere.</span></p>
       <div class="bm-code" id="bmLinkCode">------</div>
       <div class="bm-qr" id="bmQR" hidden></div>
       <div class="bm-url" id="bmLinkUrl"></div>
@@ -445,11 +452,12 @@
     <div class="pm-mid np-mid"><button data-pb="128">SELECT</button><button data-pb="64">START</button></div>
     <div class="pm-ab"><div class="np-ab"><button class="np-b" data-pb="32">B<small>&#128225;</small></button><button class="np-a" data-pb="16">A<small>&#128163;</small></button></div></div>
   </div>
+  <div class="pm-help" id="pmDeskHelp"><span class="zh">鍵盤：方向鍵或 W A S D 移動 · Space/Enter 炸彈 · E/Shift 遙控引爆 · P 暫停；也可接手把（USB/藍牙）</span><span class="en">Keyboard: arrows or W A S D to move · Space/Enter bomb · E/Shift detonate · P pause; USB/Bluetooth gamepads work too</span></div>
   <div class="pm-tip" id="pmTip" hidden><span class="zh">此瀏覽器不能把網頁切成全螢幕（iPhone 的 Safari 就是如此）。請點 Safari 的「分享」→「加入主畫面」，之後從主畫面的圖示開啟就是全螢幕；開啟後在 ⚙ 輸入電腦畫面上的 6 碼代碼即可連線。</span><span class="en">This browser cannot make a web page fullscreen (iPhone Safari works this way). Tap Share, then Add to Home Screen, and open the game from the home-screen icon for fullscreen; then enter the 6-character code from the computer under the gear button.</span><button id="pmTipX">&#10005;</button></div>
   <div class="pm-foot">&copy; AEML, NTUST &middot; <span class="zh">A＝炸彈　B/SELECT＝遙控引爆　START＝暫停</span><span class="en">A = bomb · B/SELECT = detonate · START = pause</span></div>
 </div>
 
-<div class="bm-foot" id="bmFoot">&copy; 2026 <b>AEML, NTUST</b> &middot; Blast Site v2.2.0 &middot; <span class="zh">原創作品，未經授權請勿修改或轉載</span><span class="en">Original work - do not modify or redistribute without permission</span></div>
+<div class="bm-foot" id="bmFoot">&copy; 2026 <b>AEML, NTUST</b> &middot; Blast Site v2.3.0 &middot; <span class="zh">原創作品，未經授權請勿修改或轉載</span><span class="en">Original work - do not modify or redistribute without permission</span></div>
 <input type="file" id="bmFile" accept=".json,application/json" hidden>
 
 <div id="bmT" hidden>
@@ -527,6 +535,7 @@
   <span data-k="pmNotIn"><span class="zh">此位置不在目前這場遊戲中，下一場開始後生效</span><span class="en">This slot is not in the current game - it joins the next one</span></span>
   <span data-k="pmBadCode"><span class="zh">代碼應為 6 碼英數字</span><span class="en">The code has 6 letters/digits</span></span>
   <span data-k="pmNeedCode"><span class="zh">請在 ⚙ 輸入電腦畫面上的代碼</span><span class="en">Enter the code shown on the computer (gear button)</span></span>
+  <span data-k="confirmTitle"><span class="zh">再按一次「回到標題」確認（目前遊戲會結束）</span><span class="en">Press Title again to confirm (the current game ends)</span></span>
   <span data-k="pmTiltNo"><span class="zh">此裝置不支援傾斜感測</span><span class="en">Tilt sensor unavailable</span></span>
   <span data-k="needTwo"><span class="zh">對戰至少需要 2 位（玩家或電腦）</span><span class="en">Battle needs at least 2 players</span></span>
   <span data-k="needHuman"><span class="zh">關卡模式至少需要 1 位玩家</span><span class="en">Normal mode needs at least 1 human</span></span>
@@ -564,7 +573,7 @@ const ROOT=document.getElementById('aemlBomber');
 if(!ROOT||ROOT.getAttribute('data-ready')==='1')return;
 ROOT.setAttribute('data-ready','1');
 const SELF=document.currentScript;
-const OWNER='AEML, NTUST',APP='Blast Site',VER='2.2.0',KEY='aeml_blastsite_v2_';
+const OWNER='AEML, NTUST',APP='Blast Site',VER='2.3.0',KEY='aeml_blastsite_v2_';
 const PEERJS='https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js';
 const QRJS='https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js';
 const $=id=>document.getElementById(id);
@@ -1212,7 +1221,8 @@ function onStartBtn(){if(UI.bind)return;if(UI.state==='game'){if(UI.panel&&UI.pa
 function isGameKey(code){for(const k of SET.keys)for(const a of ACTS)if(k[a]===code)return true;return false;}
 function prettyKey(c){if(!c)return '-';return c.replace(/^Key/,'').replace(/^Digit/,'').replace(/^Arrow/,'').replace(/^Numpad/,'Num ').replace(/^(Shift|Control|Alt|Meta)(Left|Right)$/,(m,a,b)=>(b==='Left'?'L-':'R-')+a);}
 window.addEventListener('keydown',e=>{
-  if(TAMPER||PADMODE)return;
+  if(TAMPER)return;
+  if(PADMODE){padKey(e,true);return;}
   const tg=e.target;if(tg&&(tg.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(tg.tagName))&&tg.type!=='range')return;
   if(UI.bind&&UI.bind.kind==='g'&&e.code==='Escape'){e.preventDefault();UI.bind=null;renderKeys();return;}
   if(UI.bind&&UI.bind.kind==='k'){e.preventDefault();e.stopPropagation();if(e.code!=='Escape')assignKey(UI.bind.p,UI.bind.a,e.code);UI.bind=null;renderKeys();return;}
@@ -1231,8 +1241,8 @@ window.addEventListener('keydown',e=>{
   }
   if(isGameKey(e.code)){e.preventDefault();IN.keys.add(e.code);}
 },true);
-window.addEventListener('keyup',e=>{IN.keys.delete(e.code);});
-window.addEventListener('blur',()=>{IN.keys.clear();});
+window.addEventListener('keyup',e=>{IN.keys.delete(e.code);if(PADMODE)padKey(e,false);});
+window.addEventListener('blur',()=>{IN.keys.clear();if(PADMODE){PAD.kb=0;PAD.kset={};padPush(true);}});
 document.addEventListener('pointerdown',e=>{const inside=ROOT.contains(e.target);if(inside!==UI.focus){UI.focus=inside;ROOT.classList.toggle('bm-nofocus',!inside);}if(inside)auInit();},true);
 window.addEventListener('gamepadconnected',e=>{log('Pad+ #'+e.gamepad.index+' '+e.gamepad.id);if(SET.gamepad)toast('padOn');});
 window.addEventListener('gamepaddisconnected',e=>{log('Pad- #'+e.gamepad.index);if(SET.gamepad)toast('padOff');});
@@ -2105,6 +2115,11 @@ function act(a,btn){
       break;
     case 'rematch':case 'start':startFromMenu();break;
     case 'title':goTitle();break;
+    case 'title2':
+      if(UI.state==='game'&&S&&!(S.phase==='matchOver'||S.phase==='over')){if(now()-UI.armT2<2500){UI.armT2=0;goTitle();}else{UI.armT2=now();toast('confirmTitle');}}
+      else if(UI.state==='replay')rpExit();
+      else goTitle();
+      break;
     case 'full':toggleFull();break;
     case 'mute':auInit();SET.audio=SET.audio?0:1;saveSettings();renderOpts();musUpdate(true);toast(SET.audio?'unmuted':'muted');break;
     case 'bgm':auInit();SET.bgm=SET.bgm?0:1;saveSettings();renderOpts();musUpdate(true);toast(SET.bgm?'bgmOn':'bgmOff');break;
@@ -2354,7 +2369,17 @@ function padSend(o){
   return false;
 }
 function padHello(){padSend({t:'hi',want:PAD.want,view:PAD.view});}
-function padBitsNow(){return PAD.bits|PAD.tilt;}
+function padBitsNow(){return PAD.bits|PAD.tilt|(PAD.kb||0)|(PAD.gp||0);}
+const PADKEYS={ArrowUp:BU,KeyW:BU,ArrowDown:BD,KeyS:BD,ArrowLeft:BL,KeyA:BL,ArrowRight:BR,KeyD:BR,Space:BA,Enter:BA,KeyJ:BA,KeyX:BA,KeyE:BB,ShiftRight:BB,ShiftLeft:BB,KeyK:BB,KeyZ:BB,KeyP:BS,Escape:BS};
+function padKey(e,down){
+  const tg=e.target;if(tg&&/^(INPUT|TEXTAREA|SELECT)$/.test(tg.tagName))return;
+  const v=PADKEYS[e.code];if(!v)return;e.preventDefault();
+  PAD.kset=PAD.kset||{};if(down)PAD.kset[e.code]=v;else delete PAD.kset[e.code];
+  let b=0;for(const k in PAD.kset)b|=PAD.kset[k];
+  if(b!==PAD.kb){PAD.kb=b;if(down)setDesk(true);padPush(true);}
+}
+function setDesk(on){const p=$('bmPad');if(p&&p.classList.contains('pm-desk')!==on){p.classList.toggle('pm-desk',on);setTimeout(checkRes,60);}}
+function padPollGp(){let b=0;const gps=getPads();if(gps.length){b=padBits(gps[0],DEF_PAD);if(b)setDesk(true);}if(b!==(PAD.gp||0)){PAD.gp=b;padPush(true);}}
 function padPush(force){
   const b=padBitsNow(),t=now(),keep=PAD.mode==='relay'?1000:400;
   if(!force&&b===PAD.lastSent&&t-PAD.lastSendT<keep)return;
@@ -2449,6 +2474,7 @@ function padLoop(){
     for(const e of S.enemies){e.x+=(e.tx-e.x)*0.35;e.y+=(e.ty-e.y)*0.35;}
     render();
   }
+  padPollGp();
   padPush(false);
 }
 function padMode(P){
@@ -2477,7 +2503,7 @@ function padMode(P){
   $('pmTipX').onclick=()=>{$('pmTip').hidden=true;};
   $('pmMenu').onclick=()=>{$('bmPad').classList.toggle('pm-open');};
   let autoFs=false;
-  document.addEventListener('pointerdown',e=>{if(autoFs||P.sa||!rqf)return;if(!(window.innerWidth>window.innerHeight))return;if(e.target.closest&&e.target.closest('#pmFull,#pmTop2,#pmMenu,.pm-tip'))return;autoFs=true;goFull(false);},true);
+  document.addEventListener('pointerdown',e=>{if(e.pointerType==='touch')setDesk(false);if(autoFs||P.sa||!rqf||e.pointerType!=='touch')return;if(!(window.innerWidth>window.innerHeight))return;if(e.target.closest&&e.target.closest('#pmFull,#pmTop2,#pmMenu,.pm-tip'))return;autoFs=true;goFull(false);},true);
   window.addEventListener('resize',()=>{if(window.innerWidth>window.innerHeight)$('bmPad').classList.remove('pm-open');});
   const ci=$('pmCodeIn');ci.value=PAD.code;
   const goCode=()=>{const v=ci.value.trim().toUpperCase();if(!/^[A-Z0-9]{6}$/.test(v)){pmStat('pmBadCode','bad');return;}$('bmPad').classList.remove('pm-open');padReconnect(v);};
@@ -2489,6 +2515,7 @@ function padMode(P){
   bindNesPad($('pmDpad'),qa('[data-pb]',$('bmPad')),b=>{PAD.bits=b;padPush(true);});
   try{if(navigator.wakeLock)navigator.wakeLock.request('screen').catch(()=>{});}catch(e){}
   document.addEventListener('visibilitychange',()=>{if(!document.hidden){try{if(navigator.wakeLock)navigator.wakeLock.request('screen').catch(()=>{});}catch(e){}padHello();}});
+  if(window.matchMedia&&matchMedia('(pointer:fine)').matches&&!touchCapable())setDesk(true);
   setMe(-1);R.active='sw';setupScene();
   if(PAD.code){store.set(KEY+'lastpad',JSON.stringify({c:PAD.code,r:PAD.r,lang:P.lang||'',ps:PAD.ps,turn:PAD.turn}));padConnect();}else{pmStat('pmNeedCode','wait');$('bmPad').classList.add('pm-open');}
   requestAnimationFrame(padLoop);
