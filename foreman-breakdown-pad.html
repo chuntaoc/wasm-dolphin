@@ -12,7 +12,7 @@
     data-lib   = folder holding peerjs.min.js and qrcode.js (defaults to data-pad's folder)
     data-peer / data-turn = optional PeerJS server / TURN server (same format as the Wii page)
 ====================================================================== -->
-<div id="aemlBomber" class="L-zh M-battle" data-owner="AEML, NTUST" data-app="Foreman Breakdown!" data-sig="e3ff3182906146de" data-relay="https://aeml-wii-relay.chuntaoc.workers.dev" data-pad="" data-lib="" data-peer="" data-turn="">
+<div id="aemlBomber" class="L-zh M-battle" data-owner="AEML, NTUST" data-app="Foreman Breakdown!" data-sig="8e4ddfb58c1e3459" data-relay="https://aeml-wii-relay.chuntaoc.workers.dev" data-pad="" data-lib="" data-peer="" data-turn="">
 <style>
 /* Foreman Breakdown! v1 - AEML, NTUST - scoped styles (ASCII only) */
 #aemlBomber{--bg:#13161d;--panel:#1e222c;--panel2:#262b37;--fg:#eef1f6;--mut:#9aa3b2;--acc:#ffb703;--acc2:#4fc3f7;--bd:#363d4c;--bad:#ef5350;--ok:#66bb6a;font-family:system-ui,-apple-system,"Segoe UI","Microsoft JhengHei","PingFang TC","Noto Sans TC",Roboto,sans-serif;color:var(--fg);background:var(--bg);max-width:900px;margin:0 auto;border-radius:14px;padding:10px;box-sizing:border-box;line-height:1.35;font-size:14px;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;text-align:left}
@@ -3195,6 +3195,7 @@ function boot(){
   setInterval(()=>{const t=now();for(const k in LINK.retain)if(t-LINK.retain[k].t>30000)delete LINK.retain[k];},5000);
   try{new MutationObserver(()=>checkIntegrity()).observe(ROOT,{attributes:true,attributeFilter:['data-sig','data-owner']});const f=$('bmFoot');if(f)new MutationObserver(()=>checkIntegrity()).observe(f,{childList:true,subtree:true,characterData:true,attributes:true});}catch(e){}
   log('Boot '+APP+' v'+VER+' by '+OWNER+' sig='+SIG);
+  if(window.parent!==window){let lh=0;const ph=()=>{const h=Math.ceil(ROOT.getBoundingClientRect().height+12);if(Math.abs(h-lh)>2){lh=h;try{window.parent.postMessage({aemlFrame:APP,h:h},'*');}catch(e){}}};setInterval(ph,400);window.addEventListener('resize',ph);ph();}
 }
 Object.freeze(DEF_KEYS);Object.freeze(DEF_PAD);Object.freeze(DEF_GLOB);
 boot();
